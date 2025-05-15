@@ -1,0 +1,32 @@
+services:
+
+  frontend:
+    build:
+      context: /home/$USER/acs-zeep
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"  # Change port as necessary
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+      - ./target:/app/target
+      - ./logs:/app/logs
+    ports:
+      - "7547:7547"
+    networks:
+      - app-network
+    depends_on:
+      - frontend
+    command: ./mvnw spring-boot:run
+
+networks:
+  app-network:
+    driver: bridge
