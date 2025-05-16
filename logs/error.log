@@ -1,0 +1,20 @@
+2025/05/16 03:42:51 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:42:52 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:42:54 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:42:55 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:42:57 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:42:59 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:43:04 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:43:11 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:43:25 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:43:51 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:44:49 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:45:49 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:46:50 [emerg] 1#1: host not found in upstream "acs-fe" in /etc/nginx/nginx.conf:19
+2025/05/16 03:48:59 [error] 29#29: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET / HTTP/1.1", upstream: "http://172.19.0.2:8080/", host: "acs-zeep-sbx.apollo.com.ph"
+2025/05/16 03:48:59 [error] 29#29: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET /favicon.ico HTTP/1.1", upstream: "http://172.19.0.2:8080/favicon.ico", host: "acs-zeep-sbx.apollo.com.ph", referrer: "https://acs-zeep-sbx.apollo.com.ph/"
+2025/05/16 03:49:33 [error] 29#29: *6 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET / HTTP/1.1", upstream: "http://172.19.0.2:8080/", host: "acs-zeep-sbx.apollo.com.ph"
+2025/05/16 03:49:33 [error] 29#29: *6 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET /favicon.ico HTTP/1.1", upstream: "http://172.19.0.2:8080/favicon.ico", host: "acs-zeep-sbx.apollo.com.ph", referrer: "https://acs-zeep-sbx.apollo.com.ph/"
+2025/05/16 03:49:41 [error] 29#29: *10 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET / HTTP/1.1", upstream: "http://172.19.0.2:8080/", host: "acs-zeep-sbx.apollo.com.ph"
+2025/05/16 03:49:41 [error] 29#29: *10 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET /favicon.ico HTTP/1.1", upstream: "http://172.19.0.2:8080/favicon.ico", host: "acs-zeep-sbx.apollo.com.ph", referrer: "https://acs-zeep-sbx.apollo.com.ph/"
+2025/05/16 05:47:52 [error] 29#29: *13 connect() failed (111: Connection refused) while connecting to upstream, client: 202.60.11.212, server: acs-zeep-sbx.apollo.com.ph, request: "GET /favicon.ico HTTP/1.1", upstream: "http://172.19.0.2:8080/favicon.ico", host: "acs-zeep-sbx.apollo.com.ph", referrer: "https://acs-zeep-sbx.apollo.com.ph/"

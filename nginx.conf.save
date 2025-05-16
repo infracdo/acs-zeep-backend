@@ -1,0 +1,68 @@
+events {}
+
+http {
+    large_client_header_buffers 4 16k;
+    server {
+        listen 80;
+        server_name hiveconnect-sandbox.dataconnect.com.ph;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name hiveconnect-sandbox.dataconnect.com.ph;
+
+        ssl_certificate /etc/nginx/certs/fullchain.pem;
+        ssl_certificate_key /etc/nginx/certs/privkey.pem;
+
+        location / {
+            proxy_pass http://hive-fe:80;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            proxy_buffer_size 16k;
+            proxy_buffers 4 16k;
+            proxy_busy_buffers_size 32k;
+#            large_client_header_buffers 4 16k;
+#            proxy_hide_header 'Access-Control-Allow-Origin';
+#            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+#            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With' always;
+#            add_header 'Access-Control-Allow-Credentials' 'true' always;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name hive-be.dataconnect.com.ph;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name hive-be.dataconnect.com.ph;
+
+        ssl_certificate /etc/nginx/certs/fullchain.pem;
+        ssl_certificate_key /etc/nginx/certs/privkey.pem;
+
+        location / {
+            proxy_pass http://hive-be:8080;
+            proxy_read_timeout 300;
+            proxy_connect_timeout 300;
+            proxy_send_timeout 300;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            proxy_buffer_size 16k;
+            proxy_buffers 4 16k;
+            proxy_busy_buffers_size 32k;
+#            large_client_header_buffers 4 16k;
+#            add_header 'Access-Control-Allow-Origin' 'https://hiveconnect-sandbox.dataconnect.com.ph' always;
+#            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+#            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With' always;
+#            add_header 'Access-Control-Allow-Credentials' 'true' always;        }
+    }
+}
