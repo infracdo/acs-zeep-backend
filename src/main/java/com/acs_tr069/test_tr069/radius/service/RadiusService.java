@@ -23,34 +23,41 @@ public class RadiusService {
 
     // Return number of currently connected users
     public Long getCountCurrentlyConnectedUsers() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
+        // -- Uncomment if you need to get the currently connected users for today
+        // long startOfDay = LocalDate.now()
         //     .atStartOfDay()
         //     .toEpochSecond(ZoneOffset.UTC);
 
-        long endOfDay = startOfDay + 86400;
+        // NOTE: for testing purposes
+        // long startOfDay = LocalDate.of(2025, 5, 19)
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
 
-        return accountingTestRepository.countCurrentlyConnectedUsers(startOfDay, endOfDay);
+        // long endOfDay = startOfDay + 86400;
+
+        // return accountingTestRepository.countCurrentlyConnectedUsers(startOfDay, endOfDay);
+        // Uncomment if you need to get the currently connected users for today --
+
+        return accountingTestRepository.countCurrentlyConnectedUsers();
     }
 
     // Return number of currently connected access points
     public Long getCountCurrentlyConnectedAPs() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
+        // -- Uncomment if you need to get the currently connected users for today
+        // long startOfDay = LocalDate.now()
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
 
         // NOTE: for testing purposes
         // long startOfDay = LocalDate.of(2025, 5, 16)
         //     .atStartOfDay()
         //     .toEpochSecond(ZoneOffset.UTC);
 
-        long endOfDay = startOfDay + 86400;
+        // long endOfDay = startOfDay + 86400;
 
-        return accountingTestRepository.countCurrentlyConnectedAPs(startOfDay, endOfDay);
+        // return accountingTestRepository.countCurrentlyConnectedAPs(startOfDay, endOfDay);
+        // Uncomment if you need to get the currently connected users for today --
+        return accountingTestRepository.countCurrentlyConnectedAPs();
     }
 
     // Return the total number of user connections for today
@@ -95,25 +102,24 @@ public class RadiusService {
 
     // Return average bandwidth per connection
     public String getAverageBandwidthPerConnection() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
+        // -- Uncomment if you need to get the currently connected users for today
+        // long startOfDay = LocalDate.now()
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
 
         // NOTE: for testing purposes
         // long startOfDay = LocalDate.of(2025, 5, 16)
         //     .atStartOfDay()
         //     .toEpochSecond(ZoneOffset.UTC);
 
-        long endOfDay = startOfDay + 86400;
+        // long endOfDay = startOfDay + 86400;
+        // Uncomment if you need to get the currently connected users for today --
 
-        long totalRawBytes = accountingTestRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
-        long totalConnections = accountingTestRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
+        Double avgBytesPerSec = accountingTestRepository.findAverageBandwidthPerConnection();
 
-        if (totalConnections == 0) return "No Connections today";
+        if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "0 B/s";
 
-        long averageBytes = totalRawBytes / totalConnections;
-
-        return formatBytes(averageBytes);
+        return formatBandwidth(avgBytesPerSec);
     }
 
     // Return list of access points
@@ -123,18 +129,22 @@ public class RadiusService {
 
     // Return currently connected users per access point
     public Map<String, Long> getCountCurrentlyConnectedUsersPerAP() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
+        // -- Uncomment if you need to get the currently connected users for today
+        // long startOfDay = LocalDate.now()
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
 
         // NOTE: for testing purposes
         // long startOfDay = LocalDate.of(2025, 5, 16)
         //     .atStartOfDay()
         //     .toEpochSecond(ZoneOffset.UTC);
 
-        long endOfDay = startOfDay + 86400;
+        // long endOfDay = startOfDay + 86400;
 
-        List<Object[]> currentlyConnectedUsers = accountingTestRepository.countCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // List<Object[]> currentlyConnectedUsers = accountingTestRepository.countCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // Uncomment if you need to get the currently connected users for today --
+
+        List<Object[]> currentlyConnectedUsers = accountingTestRepository.countCurrentlyConnectedUsersPerAP();
         Map<String, Long> response = new HashMap<>();
 
         for (Object[] row : currentlyConnectedUsers) {
@@ -148,18 +158,21 @@ public class RadiusService {
 
     // Return list of currently connected users per access point
     public Map<String, List<Map<String, Object>>> getCurrentlyConnectedUsersPerAP() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
+        // -- Uncomment if you need to get the currently connected users for today
+        // long startOfDay = LocalDate.now()
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
         
         // NOTE: for testing purposes
         // long startOfDay = LocalDate.of(2025, 5, 16)
         //     .atStartOfDay()
         //     .toEpochSecond(ZoneOffset.UTC);
 
-        long endOfDay = startOfDay + 86400;
+        // long endOfDay = startOfDay + 86400;
 
-        List<Object[]> currentlyConnectedUsers = accountingTestRepository.findCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // List<Object[]> currentlyConnectedUsers = accountingTestRepository.findCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // Uncomment if you need to get the currently connected users for today --
+        List<Object[]> currentlyConnectedUsers = accountingTestRepository.findCurrentlyConnectedUsersPerAP();
         Map<String, List<Map<String, Object>>> response = new LinkedHashMap<>();
 
         for (Object[] row : currentlyConnectedUsers) {
@@ -216,6 +229,16 @@ public class RadiusService {
         int exp = (int) (Math.log(bytes) / Math.log(1024));
         char unit = "KMGTPE".charAt(exp - 1);
         return String.format("%.2f %sB", bytes / Math.pow(1024, exp), unit);
+    }
+
+    private String formatBandwidth(double bytesPerSec) {
+        String[] units = {"B/s", "KB/s", "MB/s", "GB/s"};
+        int unitIndex = 0;
+        while (bytesPerSec >= 1024 && unitIndex < units.length - 1) {
+            bytesPerSec /= 1024;
+            unitIndex++;
+        }
+        return String.format("%.2f %s", bytesPerSec, units[unitIndex]);
     }
     
 }
