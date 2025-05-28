@@ -28,10 +28,10 @@ jobs:
         run: 
           # docker build --target build -t my-image:build .
 
-          docker build -t acs-zeep-backend:test .
+          docker build -t acs-zeep-backend:test-0.1 .
 
       # Step 4: Push the Docker image
       - name: Push Docker Image
         run: |
-          docker tag acs-zeep-backend:test infracdo/acs-zeep-backend:test
-          docker push infracdo/acs-zeep-backend:test
+          docker tag acs-zeep-backend:test-0.1 infracdo/acs-zeep-backend:test-0.1
+          docker push infracdo/acs-zeep-backend:test-0.1
