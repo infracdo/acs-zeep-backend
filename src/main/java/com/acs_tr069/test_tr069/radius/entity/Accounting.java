@@ -56,11 +56,17 @@ public class Accounting {
     @Column(name = "device")
     private String device;
 
-    @Id
     @Column(name = "mac")
     private String mac;
 
     @Column(name = "created_at", columnDefinition = "timestamptz")
     private OffsetDateTime createdAt;
+
+    @Column(name = "called_station_id")
+    private String calledStationId;
+
+    @Id
+    @Column(name = "calling_station_id")
+    private String callingStationId;
 
 }

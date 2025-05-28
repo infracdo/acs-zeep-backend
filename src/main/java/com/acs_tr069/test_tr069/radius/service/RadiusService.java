@@ -9,15 +9,15 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import com.acs_tr069.test_tr069.radius.repository.AccountingTestRepository;
+import com.acs_tr069.test_tr069.radius.repository.AccountingRepository;
 
 @Service
 public class RadiusService {
 
-    private final AccountingTestRepository accountingTestRepository;
+    private final AccountingRepository accountingRepository;
 
-    public RadiusService(AccountingTestRepository accountingTestRepository) {
-        this.accountingTestRepository = accountingTestRepository;
+    public RadiusService(AccountingRepository accountingRepository) {
+        this.accountingRepository = accountingRepository;
     }
 
 
@@ -35,10 +35,10 @@ public class RadiusService {
 
         // long endOfDay = startOfDay + 86400;
 
-        // return accountingTestRepository.countCurrentlyConnectedUsers(startOfDay, endOfDay);
+        // return accountingRepository.countCurrentlyConnectedUsers(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
 
-        return accountingTestRepository.countCurrentlyConnectedUsers();
+        return accountingRepository.countCurrentlyConnectedUsers();
     }
 
     // Return number of currently connected access points
@@ -55,9 +55,9 @@ public class RadiusService {
 
         // long endOfDay = startOfDay + 86400;
 
-        // return accountingTestRepository.countCurrentlyConnectedAPs(startOfDay, endOfDay);
+        // return accountingRepository.countCurrentlyConnectedAPs(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
-        return accountingTestRepository.countCurrentlyConnectedAPs();
+        return accountingRepository.countCurrentlyConnectedAPs();
     }
 
     // Return the total number of user connections for today
@@ -73,7 +73,7 @@ public class RadiusService {
 
         long endOfDay = startOfDay + 86400;
 
-        return accountingTestRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
+        return accountingRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
     }
 
     // Return total bandwidth consumption for today
@@ -89,14 +89,14 @@ public class RadiusService {
 
         long endOfDay = startOfDay + 86400;
 
-        long totalRawBytes = accountingTestRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
+        long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
 
         return formatBytes(totalRawBytes);
     }
 
     // Return average connection time
     public String getAverageConnectionTime() {
-        Double avgSeconds = accountingTestRepository.findAverageConnectionTime();
+        Double avgSeconds = accountingRepository.findAverageConnectionTime();
         return formatDuration(avgSeconds);
     }
 
@@ -115,7 +115,7 @@ public class RadiusService {
         // long endOfDay = startOfDay + 86400;
         // Uncomment if you need to get the currently connected users for today --
 
-        Double avgBytesPerSec = accountingTestRepository.findAverageBandwidthPerConnection();
+        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection();
 
         if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "0 B/s";
 
@@ -124,7 +124,7 @@ public class RadiusService {
 
     // Return list of access points
     public List<String> getAllAccessPoints() {
-        return accountingTestRepository.findAllAccessPoints();
+        return accountingRepository.findAllAccessPoints();
     }
 
     // Return currently connected users per access point
@@ -141,10 +141,10 @@ public class RadiusService {
 
         // long endOfDay = startOfDay + 86400;
 
-        // List<Object[]> currentlyConnectedUsers = accountingTestRepository.countCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // List<Object[]> currentlyConnectedUsers = accountingRepository.countCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
 
-        List<Object[]> currentlyConnectedUsers = accountingTestRepository.countCurrentlyConnectedUsersPerAP();
+        List<Object[]> currentlyConnectedUsers = accountingRepository.countCurrentlyConnectedUsersPerAP();
         Map<String, Long> response = new HashMap<>();
 
         for (Object[] row : currentlyConnectedUsers) {
@@ -170,9 +170,9 @@ public class RadiusService {
 
         // long endOfDay = startOfDay + 86400;
 
-        // List<Object[]> currentlyConnectedUsers = accountingTestRepository.findCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
+        // List<Object[]> currentlyConnectedUsers = accountingRepository.findCurrentlyConnectedUsersPerAP(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
-        List<Object[]> currentlyConnectedUsers = accountingTestRepository.findCurrentlyConnectedUsersPerAP();
+        List<Object[]> currentlyConnectedUsers = accountingRepository.findCurrentlyConnectedUsersPerAP();
         Map<String, List<Map<String, Object>>> response = new LinkedHashMap<>();
 
         for (Object[] row : currentlyConnectedUsers) {
