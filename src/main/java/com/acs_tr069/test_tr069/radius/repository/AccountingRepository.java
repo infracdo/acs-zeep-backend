@@ -13,61 +13,58 @@ import com.acs_tr069.test_tr069.radius.entity.Accounting;
 public interface AccountingRepository extends JpaRepository<Accounting, String> {
 
     // Query to get number of currently connected users
-    // @Query(value = "SELECT COUNT(DISTINCT calling_station_id) " +
-    //     "FROM accounting " +
-    //     "WHERE acctstatustype = 'Start' " +
-    //     "AND time_stamp >= :startOfDay " +
-    //     "AND time_stamp < :endOfDay",
+    // @Query(value = "SELECT COUNT(DISTINCT a1.calling_station_id) " +
+    //     "FROM accounting a1 " +
+    //     "WHERE a1.acctstatustype = 'Start' " +
+    //     // "AND a1.time_stamp >= :startOfDay " +    // uncomment if you need to get the currently connected users for today
+    //     // "AND a1.time_stamp < :endOfDay " +       // uncomment if you need to get the currently connected users for today
+    //     "AND NOT EXISTS (" +
+    //     "   SELECT 1 FROM accounting a2 " +
+    //     "   WHERE a2.acctstatustype = 'Stop' " +
+    //     "   AND a2.calling_station_id = a1.calling_station_id " +
+    //     "   AND a2.time_stamp >= a1.time_stamp " +
+    //     // "   AND a2.time_stamp < :endOfDay" +     // uncomment if you need to get the currently connected users for today
+    //     ")",
     //     nativeQuery = true)
-    // long countCurrentlyConnectedUsers(
-    //     @Param("startOfDay") long startOfDay,
-    //     @Param("endOfDay") long endOfDay
-    // );
-    // NOTE: since we couldn't just query directly the users with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
-    // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT COUNT(DISTINCT a1.calling_station_id) " +
+    // // long countCurrentlyConnectedUsers(           // uncomment if you need to get the currently connected users for today
+    // //     @Param("startOfDay") long startOfDay,
+    // //     @Param("endOfDay") long endOfDay
+    // // );
+    // long countCurrentlyConnectedUsers();
+    @Query(value = "SELECT COUNT(DISTINCT a1.username, a1.calling_station_id) " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
-        // "AND a1.time_stamp >= :startOfDay " +    // uncomment if you need to get the currently connected users for today
-        // "AND a1.time_stamp < :endOfDay " +       // uncomment if you need to get the currently connected users for today
+        "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
         "   AND a2.calling_station_id = a1.calling_station_id " +
+        "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
-        // "   AND a2.time_stamp < :endOfDay" +     // uncomment if you need to get the currently connected users for today
         ")",
         nativeQuery = true)
-    // long countCurrentlyConnectedUsers(           // uncomment if you need to get the currently connected users for today
-    //     @Param("startOfDay") long startOfDay,
-    //     @Param("endOfDay") long endOfDay
-    // );
     long countCurrentlyConnectedUsers();
     
     // Query to get the number of currently connected access points
     // @Query(value = "SELECT COUNT(DISTINCT called_station_id) " +
-    //     "FROM accounting " +
-    //     "WHERE acctstatustype = 'Start' " +
-    //     "AND time_stamp >= :startOfDay " +
-    //     "AND time_stamp < :endOfDay",
+    //     "FROM accounting a1 " +
+    //     "WHERE a1.acctstatustype = 'Start' " +
+    //     "AND NOT EXISTS (" +
+    //     "   SELECT 1 FROM accounting a2 " +
+    //     "   WHERE a2.acctstatustype = 'Stop' " +
+    //     "   AND a2.called_station_id = a1.called_station_id " +
+    //     "   AND a2.time_stamp >= a1.time_stamp" +
+    //     ")",
     //     nativeQuery = true)
-    // long countCurrentlyConnectedAPs(
-    //     @Param("startOfDay") long startOfDay,
-    //     @Param("endOfDay") long endOfDay
-    // );
-    // NOTE: since we couldn't just query directly the access points with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
-    // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT COUNT(DISTINCT called_station_id) " +
+    // long countCurrentlyConnectedAPs();
+    @Query(value = "SELECT COUNT(DISTINCT a1.username, a1.called_station_id) " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
-        // "AND time_stamp >= :startOfDay " +
-        // "AND time_stamp < :endOfDay",
+        "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.called_station_id = a1.called_station_id " +
-        "   AND a2.time_stamp >= a1.time_stamp" +
-        // "   AND a2.time_stamp < :endOfDay" +     // uncomment if you need to get the currently connected users for today
+        "   AND a2.calling_station_id = a1.calling_station_id " +
+        "   AND a2.username = a1.username " +
+        "   AND a2.time_stamp >= a1.time_stamp " +
         ")",
         nativeQuery = true)
     long countCurrentlyConnectedAPs();
@@ -107,13 +104,8 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "FROM accounting a " +
         "WHERE a.acctstatustype = 'Stop' " +
         "AND a.acctsessiontime > 0",
-        // "AND a.time_stamp >= :startTime " +  // Uncomment if need to get the average bandwidth per connection for today
-        // "AND a.time_stamp < :endTime",       // Uncomment if need to get the average bandwidth per connection for today
     nativeQuery = true)
-    Double findAverageBandwidthPerConnection(
-        // @Param("startTime") long startTime,  // Uncomment if need to get the average bandwidth per connection for today
-        // @Param("endTime") long endTime       // Uncomment if need to get the average bandwidth per connection for today
-    );
+    Double findAverageBandwidthPerConnection();
 
     // Query to get the list of access points
     @Query(value = "SELECT DISTINCT called_station_id " +
@@ -122,65 +114,65 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     List<String> findAllAccessPoints();
 
     // Query to get number of currently connected users per access point
-    // @Query(value = "SELECT called_station_id, COUNT(DISTINCT calling_station_id) as user_count " +
-    //     "FROM accounting " +
-    //     "WHERE acctstatustype = 'Start' " +
-    //     "AND time_stamp >= :startOfDay " +
-    //     "AND time_stamp < :endOfDay " +
-    //     "GROUP BY called_station_id",
+    // @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.calling_station_id) as user_count " +
+    //     "FROM accounting a1 " +
+    //     "WHERE a1.acctstatustype = 'Start' " +
+    //     "AND NOT EXISTS (" +
+    //     "   SELECT 1 FROM accounting a2 " +
+    //     "   WHERE a2.acctstatustype = 'Stop' " +
+    //     "   AND a2.calling_station_id = a1.calling_station_id " +
+    //     "   AND a2.time_stamp >= a1.time_stamp " +
+    //     ")" +
+    //     "GROUP BY a1.called_station_id",
     //     nativeQuery = true)
-    // List<Object[]> countCurrentlyConnectedUsersPerAP(
-    //     @Param("startOfDay") long startOfDay,
-    //     @Param("endOfDay") long endOfDay
-    // );
-    // NOTE: since we couldn't just query directly the users with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
-    // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.calling_station_id) as user_count " +
+    // List<Object[]> countCurrentlyConnectedUsersPerAP();
+    @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.username, a1.calling_station_id) as user_count " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
-        // "AND a1.time_stamp >= :startOfDay " +   // Uncomment if you need to get the currently connected users for today
-        // "AND a1.time_stamp < :endOfDay " +      // Uncomment if you need to get the currently connected users for today
+        "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
         "   AND a2.calling_station_id = a1.calling_station_id " +
+        "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
-        // "   AND a2.time_stamp < :endOfDay " +    // Uncomment if you need to get the currently connected users for today
         ")" +
         "GROUP BY a1.called_station_id",
         nativeQuery = true)
     List<Object[]> countCurrentlyConnectedUsersPerAP();
 
     // Query to get list of currently connected users per access point
-    // @Query(value = "SELECT called_station_id, username, acctinputoctets, acctoutputoctets, nasport, calling_station_id, time_stamp " +
-    //     "FROM accounting " +
-    //     "WHERE acctstatustype = 'Start' " +
-    //     "AND time_stamp >= :startOfDay " +
-    //     "AND time_stamp < :endOfDay " +
-    //     "ORDER BY called_station_id, time_stamp DESC",
+    // @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
+    //     "FROM accounting a1 " +
+    //     "WHERE a1.acctstatustype = 'Start' " +
+    //     "AND NOT EXISTS (" +
+    //     "   SELECT 1 FROM accounting a2 " +
+    //     "   WHERE a2.acctstatustype = 'Stop' " +
+    //     "   AND a2.calling_station_id = a1.calling_station_id " +
+    //     "   AND a2.time_stamp >= a1.time_stamp " +
+    //     ")" +
+    //     "ORDER BY a1.called_station_id, a1.time_stamp DESC",
     //     nativeQuery = true)
-    // List<Object[]> findCurrentlyConnectedUsersPerAP(
-    //     @Param("startOfDay") long startOfDay,
-    //     @Param("endOfDay") long endOfDay
-    // );
-    // NOTE: since we couldn't just query directly the users with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
-    // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
+    // List<Object[]> findCurrentlyConnectedUsersPerAP();
     @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
-        // "AND a1.time_stamp >= :startOfDay " +    // Uncomment if need to get currently connected users for today
-        // "AND a1.time_stamp < :endOfDay " +       // Uncomment if need to get currently connected users for today
-        "AND NOT EXISTS (" +
+        "INNER JOIN ( " +
+        "   SELECT calling_station_id, username, MAX(time_stamp) AS latest_time " +
+        "   FROM accounting " +
+        "   WHERE acctstatustype = 'Alive' " +
+        "   GROUP BY calling_station_id, username " +
+        ") latest_alive " +
+        "ON a1.calling_station_id = latest_alive.calling_station_id " +
+        "AND a1.username = latest_alive.username " +
+        "AND a1.time_stamp = latest_alive.latest_time " +
+        "WHERE a1.acctstatustype = 'Alive' " +
+        "AND NOT EXISTS ( " +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
         "   AND a2.calling_station_id = a1.calling_station_id " +
+        "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
-        // "   AND a2.time_stamp < :endOfDay " +    // Uncomment if you need to get currently connected users for today
-        ")" +
+        ") " +
         "ORDER BY a1.called_station_id, a1.time_stamp DESC",
         nativeQuery = true)
-    List<Object[]> findCurrentlyConnectedUsersPerAP(
-        // @Param("startOfDay") long startOfDay,    // Uncomment if need to get currently connected users for today
-        // @Param("endOfDay") long endOfDay         // Uncomment if need to get currently connected users for today
-    );
+    List<Object[]> findCurrentlyConnectedUsersPerAP();
 }
