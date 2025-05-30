@@ -13,31 +13,12 @@ import com.acs_tr069.test_tr069.radius.entity.Accounting;
 public interface AccountingRepository extends JpaRepository<Accounting, String> {
 
     // Query to get number of currently connected users
-    // @Query(value = "SELECT COUNT(DISTINCT a1.calling_station_id) " +
-    //     "FROM accounting a1 " +
-    //     "WHERE a1.acctstatustype = 'Start' " +
-    //     // "AND a1.time_stamp >= :startOfDay " +    // uncomment if you need to get the currently connected users for today
-    //     // "AND a1.time_stamp < :endOfDay " +       // uncomment if you need to get the currently connected users for today
-    //     "AND NOT EXISTS (" +
-    //     "   SELECT 1 FROM accounting a2 " +
-    //     "   WHERE a2.acctstatustype = 'Stop' " +
-    //     "   AND a2.calling_station_id = a1.calling_station_id " +
-    //     "   AND a2.time_stamp >= a1.time_stamp " +
-    //     // "   AND a2.time_stamp < :endOfDay" +     // uncomment if you need to get the currently connected users for today
-    //     ")",
-    //     nativeQuery = true)
-    // // long countCurrentlyConnectedUsers(           // uncomment if you need to get the currently connected users for today
-    // //     @Param("startOfDay") long startOfDay,
-    // //     @Param("endOfDay") long endOfDay
-    // // );
-    // long countCurrentlyConnectedUsers();
-    @Query(value = "SELECT COUNT(DISTINCT a1.username, a1.calling_station_id) " +
+    @Query(value = "SELECT COUNT(DISTINCT a1.username) " +
         "FROM accounting a1 " +
         "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.calling_station_id = a1.calling_station_id " +
         "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
         ")",
@@ -45,32 +26,21 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     long countCurrentlyConnectedUsers();
     
     // Query to get the number of currently connected access points
-    // @Query(value = "SELECT COUNT(DISTINCT called_station_id) " +
-    //     "FROM accounting a1 " +
-    //     "WHERE a1.acctstatustype = 'Start' " +
-    //     "AND NOT EXISTS (" +
-    //     "   SELECT 1 FROM accounting a2 " +
-    //     "   WHERE a2.acctstatustype = 'Stop' " +
-    //     "   AND a2.called_station_id = a1.called_station_id " +
-    //     "   AND a2.time_stamp >= a1.time_stamp" +
-    //     ")",
-    //     nativeQuery = true)
-    // long countCurrentlyConnectedAPs();
-    @Query(value = "SELECT COUNT(DISTINCT a1.username, a1.called_station_id) " +
+    // NOTE: change this to nasidentifier if the column is already implemented (since the nasidentifier accurately identifies distinct access points)
+    @Query(value = "SELECT COUNT(DISTINCT a1.called_station_id) " +
         "FROM accounting a1 " +
         "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.calling_station_id = a1.calling_station_id " +
-        "   AND a2.username = a1.username " +
+        "   AND a2.called_station_id = a1.called_station_id " +
         "   AND a2.time_stamp >= a1.time_stamp " +
         ")",
         nativeQuery = true)
     long countCurrentlyConnectedAPs();
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(DISTINCT calling_station_id) " +
+    @Query(value = "SELECT COUNT(DISTINCT username) " +
         "FROM accounting " +
         "WHERE time_stamp >= :startOfDay " +
         "AND time_stamp < :endOfDay",
@@ -108,31 +78,20 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     Double findAverageBandwidthPerConnection();
 
     // Query to get the list of access points
+    // NOTE: change this to nasidentifier if the column is already implemented (since the nasidentifier accurately identifies distinct access points)
     @Query(value = "SELECT DISTINCT called_station_id " +
         "FROM accounting ",
         nativeQuery = true)
     List<String> findAllAccessPoints();
 
     // Query to get number of currently connected users per access point
-    // @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.calling_station_id) as user_count " +
-    //     "FROM accounting a1 " +
-    //     "WHERE a1.acctstatustype = 'Start' " +
-    //     "AND NOT EXISTS (" +
-    //     "   SELECT 1 FROM accounting a2 " +
-    //     "   WHERE a2.acctstatustype = 'Stop' " +
-    //     "   AND a2.calling_station_id = a1.calling_station_id " +
-    //     "   AND a2.time_stamp >= a1.time_stamp " +
-    //     ")" +
-    //     "GROUP BY a1.called_station_id",
-    //     nativeQuery = true)
-    // List<Object[]> countCurrentlyConnectedUsersPerAP();
-    @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.username, a1.calling_station_id) as user_count " +
+    // NOTE: change this to nasidentifier if the column is already implemented (since the nasidentifier accurately identifies distinct access points)
+    @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.username) as user_count " +
         "FROM accounting a1 " +
         "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS (" +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.calling_station_id = a1.calling_station_id " +
         "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
         ")" +
@@ -141,38 +100,28 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     List<Object[]> countCurrentlyConnectedUsersPerAP();
 
     // Query to get list of currently connected users per access point
-    // @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
-    //     "FROM accounting a1 " +
-    //     "WHERE a1.acctstatustype = 'Start' " +
-    //     "AND NOT EXISTS (" +
-    //     "   SELECT 1 FROM accounting a2 " +
-    //     "   WHERE a2.acctstatustype = 'Stop' " +
-    //     "   AND a2.calling_station_id = a1.calling_station_id " +
-    //     "   AND a2.time_stamp >= a1.time_stamp " +
-    //     ")" +
-    //     "ORDER BY a1.called_station_id, a1.time_stamp DESC",
-    //     nativeQuery = true)
-    // List<Object[]> findCurrentlyConnectedUsersPerAP();
     @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
         "FROM accounting a1 " +
         "INNER JOIN ( " +
-        "   SELECT calling_station_id, username, MAX(time_stamp) AS latest_time " +
+        "   SELECT username, MAX(time_stamp) AS latest_time " +
         "   FROM accounting " +
         "   WHERE acctstatustype = 'Alive' " +
-        "   GROUP BY calling_station_id, username " +
+        "   GROUP BY username " +
         ") latest_alive " +
-        "ON a1.calling_station_id = latest_alive.calling_station_id " +
-        "AND a1.username = latest_alive.username " +
+        // "ON a1.calling_station_id = latest_alive.calling_station_id " +
+        // "AND a1.username = latest_alive.username " +
+        "ON a1.username = latest_alive.username " +
         "AND a1.time_stamp = latest_alive.latest_time " +
         "WHERE a1.acctstatustype = 'Alive' " +
         "AND NOT EXISTS ( " +
         "   SELECT 1 FROM accounting a2 " +
         "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.calling_station_id = a1.calling_station_id " +
+        // "   AND a2.calling_station_id = a1.calling_station_id " +
         "   AND a2.username = a1.username " +
         "   AND a2.time_stamp >= a1.time_stamp " +
         ") " +
-        "ORDER BY a1.called_station_id, a1.time_stamp DESC",
+        // "ORDER BY a1.called_station_id, a1.time_stamp DESC",
+        "ORDER BY a1.username, a1.time_stamp DESC",
         nativeQuery = true)
     List<Object[]> findCurrentlyConnectedUsersPerAP();
 }
