@@ -5,7 +5,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
-@Entity
+// TODO; CREATE DIFFERENT DEVICES ENTITY FOR ZEEP
+@Entity // change table to zeep_devices
 public class devices {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -16,18 +17,18 @@ public class devices {
     private String manufacturer;
     private String oui;
     private String hardware_ver;
-    private String root_fs_ver;
-    private String firmware_ver;
-    private String ap_mode;
+    private String root_fs_ver; // found in zeep not in hive
+    private String firmware_ver; // found in zeep not in hive
+    private String ap_mode; // found in zeep not in hive
     private String mac_address;
-    private String os_type;
-    private String host_name;
-    private String max_users;
-    private String ip;
-    private String last_reboot;
-    private String last_boot;
-    private String root_data_model;
-    private String web_auth;
+    private String os_type; // found in zeep not in hive
+    private String host_name; // found in zeep not in hive
+    private String max_users; // found in zeep not in hive
+    private String ip; // found in zeep not in hive
+    private String last_reboot; // found in zeep not in hive
+    private String last_boot; // found in zeep not in hive
+    private String root_data_model; // found in zeep not in hive
+    private String web_auth; // found in zeep not in hive
     private String group_path;
     private String udp_con_req_url;
 
