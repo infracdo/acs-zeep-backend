@@ -1,25 +1,16 @@
 package com.acs_tr069.test_tr069.Controller;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.Optional;
 import java.util.Random;
 
@@ -46,8 +37,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
-import org.yaml.snakeyaml.events.Event.ID;
-
 import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
 import com.acs_tr069.test_tr069.CWMPResponses.GetSoapFromString;
 import com.acs_tr069.test_tr069.Entity.httprequestlog;
@@ -74,7 +63,6 @@ import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 
 import com.acs_tr069.test_tr069.StoreRequestResult.GetResponseResult;
 import com.acs_tr069.test_tr069.UDP.udp_sender;
-import com.acs_tr069.test_tr069.UDP.udp_server;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
 import com.google.common.base.Charsets;
 import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
