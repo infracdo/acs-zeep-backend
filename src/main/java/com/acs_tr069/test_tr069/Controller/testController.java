@@ -1,25 +1,16 @@
 package com.acs_tr069.test_tr069.Controller;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.Optional;
 import java.util.Random;
 
@@ -46,8 +37,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
-import org.yaml.snakeyaml.events.Event.ID;
-
 import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
 import com.acs_tr069.test_tr069.CWMPResponses.GetSoapFromString;
 import com.acs_tr069.test_tr069.Entity.httprequestlog;
@@ -74,7 +63,6 @@ import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 
 import com.acs_tr069.test_tr069.StoreRequestResult.GetResponseResult;
 import com.acs_tr069.test_tr069.UDP.udp_sender;
-import com.acs_tr069.test_tr069.UDP.udp_server;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
 import com.google.common.base.Charsets;
 import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
@@ -126,6 +114,8 @@ public class testController {
         new udp_server().start();
     }
     */
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
@@ -310,6 +300,7 @@ public class testController {
         }, "logging " + serial_num).start();
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void CheckDeviceEventCode(String Payload) {
         //System.out.println(LocalTime.now() + "Current Thread: " + Thread.currentThread().getName());
         new Thread(() -> {
@@ -402,6 +393,7 @@ public class testController {
         }, "CheckEvent").start();
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void Bootstraping(String serial_num) {
         new Thread(() -> {
             // search and destroy accesspoint objects
@@ -640,6 +632,7 @@ public class testController {
         }
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void ApplyOldCommand(String serial_num, String device_group) {
         List<group_command> CommandsInGroup = GroupCommandRepo.findByParent(device_group);
         devices currentDevice = devicesRepo.gEntityBySerialnum(serial_num);
@@ -681,6 +674,7 @@ public class testController {
         return DeviceSN;
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @Scheduled(fixedRate = 60000)
     private void ZabbixAPI_Test() throws IOException, JSONException {
         /*
@@ -987,7 +981,7 @@ public class testController {
         //UpdateItem();
     }
 
-
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
         /*
@@ -1064,6 +1058,8 @@ public class testController {
             httplogreqRepo.save(newHttpLog);
         }
     }
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void UpdateDeviceDetail(String Payload) throws JSONException{
         SOAPBody InformData = null;
         Integer NumData = 0;
@@ -1105,7 +1101,7 @@ public class testController {
         }
     }
 
-    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void UpdateDevicesTable(String Payload) throws JSONException {
         //DevicesGet
         /*
@@ -1193,6 +1189,7 @@ public class testController {
     //############################################################################
 
     //@RequestMapping(value="/TestSendConnectionRequest/{SN}")
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void SendUDPRequest(@PathVariable String SN) throws IOException{
         
         new Thread(()->{
@@ -1258,8 +1255,9 @@ public class testController {
     //############################################################################
     //SaveTask
     //############################################################################
-
-    public void SaveTask(String SN, String Method,String Parameters,String Optional){
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
+    public void SaveTask(String SN, String Method,String Parameters,String Optional){ 
         taskhandler newTasK = new taskhandler();
         newTasK.set_SN(SN);
         newTasK.set_method(Method);
@@ -1507,7 +1505,7 @@ public class testController {
     }
   
     @RequestMapping(value="/Reboot/{SerialNum}")
-    public String Reboot(@PathVariable String SerialNum) {
+    public String Reboot(@PathVariable String SerialNum) { 
         SaveTask(SerialNum, "Reboot", "None", "None");
         return "Task Added";
     }
@@ -1598,6 +1596,7 @@ public class testController {
         return result;
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @RequestMapping(value="/CliAutoComplete/ {SerialNum}")
     public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )
             throws JSONException 
