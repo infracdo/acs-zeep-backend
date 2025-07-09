@@ -511,7 +511,7 @@ public class testController {
                     // add info to radius
                     String mac = device_to_bootstrap.getmac_address();
                     String ssid = device_to_bootstrap.getdevice_name();
-                    AddAllowedNasMacAddressTable(mac, ssid);
+                    AddApInfoToRadius(mac, ssid);
 
                     // add info to netbox
                     break;
@@ -1818,9 +1818,6 @@ public class testController {
 	@PostMapping("/adddevice")
 	public device postGroup(@RequestBody device DEVICE) {
 
-        if (DEVICE.getdevice_name() == null || DEVICE.getdevice_name().isEmpty()) {
-            DEVICE.setdevice_name("Unknown Device");
-        }
         device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), DEVICE.getdate_created(), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
 		return Device;
     }
@@ -1940,11 +1937,7 @@ public class testController {
         device _device = deviceData.get();
         _device.setdevice_name(Device.getdevice_name());
         _device.setparent(Device.getparent());
-        
-        if (Device.getparent().equalsIgnoreCase("unassigned") == false) {
-          _device.setstatus(Device.getstatus());
-        } 
-        _device.setlocation(Device.getlocation()); // get parentd
+        _device.setlocation(Device.getlocation()); 
         _device.setmac_address(Device.getmac_address());
         _device.setserial_number(Device.getserial_number());
         _device.setdate_created(Device.getdate_created());
