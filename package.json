@@ -1,0 +1,12 @@
+{
+  "name": "acs-zeep-backend",
+  "version": "1.0.0",
+  "description": "Install Java djk\r add to profile",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
