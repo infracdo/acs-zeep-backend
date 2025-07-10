@@ -711,39 +711,41 @@ public class testController {
         return DeviceSN;
     }
 
-	@GetMapping("/getNetboxSiteId")
+	@GetMapping("/getNetboxSiteId") // BUG; JAVA.NET.HTTP IS NOT SUPPORTED IN JAVA 8, NEED TO USE RESTTEMPLATE
     public String GetSiteId(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
         String netboxApiUrl = env.getProperty("netbox.api.url");
         String netboxAuthToken = env.getProperty("netbox.auth.token");
+        String url = netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
 
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest
-        .newBuilder()
-        .uri(URI.create(netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16"))
-        .GET()
-        .header("Authorization", "Token " + netboxAuthToken)
-        .build();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Token " + netboxAuthToken);
 
-        HttpResponse<String> response = client.send(
-        request,
-        HttpResponse.BodyHandlers.ofString()
-        );
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        if (response.statusCode() == 200) {
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+
+        if (response.getStatusCodeValue() == 200) {
             try {
-                JSONObject jsonobject = new JSONObject(response.body());
+                JSONObject jsonobject = new JSONObject(response.getBody());
                 int count = jsonobject.getInt("count");
                 return String.valueOf(count);
             } catch (JSONException e) {
                 return "JSON ERROR";
             }
         } else {
-            return "ERROR CODE " + response.statusCode();
+            return "ERROR CODE " + response.getStatusCodeValue();
         }
     }
 
-    @GetMapping("/createNetboxSiteId")
-    public String CreateSiteId(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
+    @GetMapping("/createNetboxSite")
+    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
         String netboxApiUrl = env.getProperty("netbox.api.url");
         String netboxAuthToken = env.getProperty("netbox.auth.token");
 
