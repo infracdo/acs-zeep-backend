@@ -14,7 +14,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "allowed_nas_mac_address") 
+@Table(name = "allowed_nas_mac_address", schema = "public")
 public class AllowedNasMacAddress {
     
     @Id
