@@ -64,6 +64,8 @@ import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 import com.acs_tr069.test_tr069.StoreRequestResult.GetResponseResult;
 import com.acs_tr069.test_tr069.UDP.udp_sender;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
+import com.acs_tr069.test_tr069.radius.entity.AllowedNasMacAddress;
+import com.acs_tr069.test_tr069.radius.repository.AllowedNasMacAddressRepository;
 import com.google.common.base.Charsets;
 import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 
@@ -91,6 +93,8 @@ public class testController {
     private groupsRepository group_repo;
     @Autowired
     private auto_completeRepository auto_completeRepo;
+    @Autowired
+    private AllowedNasMacAddressRepository allowedNasMacAddressRepository;
 
     String cwmpheader = null;
     String Output = null;
@@ -101,7 +105,11 @@ public class testController {
     private GetSoapFromString getSoap;
     private RandomCodeGen randomGen;
     private ZabbixApiRPCCalls zabbixRPC;
-    private udp_sender sendudp_request;     
+    private udp_sender sendudp_request;
+
+    testController(AllowedNasMacAddressRepository allowedNasMacAddressRepository) {
+        this.allowedNasMacAddressRepository = allowedNasMacAddressRepository;
+    }     
     /*
     public void setup() throws SocketException{
         System.out.println("UDP server start");
@@ -499,6 +507,13 @@ public class testController {
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                     device_to_bootstrap.setstatus("synced");
                     device_front.save(device_to_bootstrap);
+                    
+                    // add info to radius
+                    String mac = device_to_bootstrap.getmac_address();
+                    String ssid = device_to_bootstrap.getdevice_name();
+                    AddApInfoToRadius(mac, ssid);
+
+                    // add info to netbox
                     break;
                 }
             }
@@ -672,6 +687,21 @@ public class testController {
             DeviceSN = httplogreqRepo.getByCookie(currentCookie).get_SN();
         }
         return DeviceSN;
+    }
+
+	@PostMapping("/addtoradius")
+    public void AddApInfoToRadius(String mac, String ssid) {
+        String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
+        String calledStationId = cleanedMac + ":" + ssid;
+        System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
+
+        Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
+        
+        if (!optionalAddress.isPresent()) {
+            AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
+            newAddress.setCalledStationId(calledStationId);
+            allowedNasMacAddressRepository.save(newAddress);
+        }
     }
 
     // TODO; CREATE SEPARATE METHOD FOR ZEEP
@@ -1907,7 +1937,7 @@ public class testController {
         device _device = deviceData.get();
         _device.setdevice_name(Device.getdevice_name());
         _device.setparent(Device.getparent());
-        _device.setlocation(Device.getlocation());
+        _device.setlocation(Device.getlocation()); 
         _device.setmac_address(Device.getmac_address());
         _device.setserial_number(Device.getserial_number());
         _device.setdate_created(Device.getdate_created());
