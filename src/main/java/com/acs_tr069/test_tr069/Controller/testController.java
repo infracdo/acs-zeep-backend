@@ -3,16 +3,24 @@ package com.acs_tr069.test_tr069.Controller;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.SocketException;
+import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.net.http.HttpClient;
+import org.springframework.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -23,6 +31,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.configurationprocessor.json.JSONArray;
 import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +46,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
 import com.acs_tr069.test_tr069.CWMPResponses.GetSoapFromString;
@@ -66,6 +79,8 @@ import com.acs_tr069.test_tr069.UDP.udp_sender;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
 import com.acs_tr069.test_tr069.radius.entity.AllowedNasMacAddress;
 import com.acs_tr069.test_tr069.radius.repository.AllowedNasMacAddressRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 
@@ -73,6 +88,8 @@ import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 @RestController
 public class testController {
 
+    @Autowired
+    private Environment env;
     @Autowired
     private httplogreqRepo httplogreqRepo;
     @Autowired
@@ -511,9 +528,14 @@ public class testController {
                     // add info to radius
                     String mac = device_to_bootstrap.getmac_address();
                     String ssid = device_to_bootstrap.getdevice_name();
-                    AddApInfoToRadius(mac, ssid);
+
+                    String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
+                    String calledStationId = cleanedMac + ":" + ssid;
+                    System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
+                    AddApInfoToRadius(calledStationId);
 
                     // add info to netbox
+                    
                     break;
                 }
             }
@@ -689,19 +711,100 @@ public class testController {
         return DeviceSN;
     }
 
-	@PostMapping("/addtoradius")
-    public void AddApInfoToRadius(String mac, String ssid) {
-        String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
-        String calledStationId = cleanedMac + ":" + ssid;
-        System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
+	@GetMapping("/getNetboxSiteId")
+    public String GetSiteId(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
 
-        Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest
+        .newBuilder()
+        .uri(URI.create(netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16"))
+        .GET()
+        .header("Authorization", "Token " + netboxAuthToken)
+        .build();
+
+        HttpResponse<String> response = client.send(
+        request,
+        HttpResponse.BodyHandlers.ofString()
+        );
+
+        if (response.statusCode() == 200) {
+            try {
+                JSONObject jsonobject = new JSONObject(response.body());
+                int count = jsonobject.getInt("count");
+                return String.valueOf(count);
+            } catch (JSONException e) {
+                return "JSON ERROR";
+            }
+        } else {
+            return "ERROR CODE " + response.statusCode();
+        }
+    }
+
+    @GetMapping("/createNetboxSiteId")
+    public String CreateSiteId(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>();
+
+        requestBody.put("name", sitename);
+        requestBody.put("slug", "acs-zeep");
+        requestBody.put("tenant", 16);
+        requestBody.put("status", "active");
+        requestBody.put("description", "Access Points located at CDO");
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+
+        System.out.println("response body " + response.getBody());
         
+        if (response.getStatusCodeValue() == 200) {
+            try {
+                JSONObject json = new JSONObject(response.getBody());
+                if (json.has("id")) {
+                    return String.valueOf(json.getInt("id")); // return id as string
+                }
+            } catch (JSONException e) {
+                return "JSON ERROR";
+            }
+        } 
+        return "ERROR CODE " + response.getStatusCodeValue();
+    }
+
+	@PostMapping("/addtoradius")
+    public ResponseEntity<?> AddApInfoToRadius(@RequestParam String calledStationId) {
+        try {
+            Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
+        System.out.println(optionalAddress.isPresent() ? "Mac address already exists" : "Mac address does not exist");
+
         if (!optionalAddress.isPresent()) {
             AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
             newAddress.setCalledStationId(calledStationId);
             allowedNasMacAddressRepository.save(newAddress);
+
+            return ResponseEntity.ok("Mac address added successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Mac address already exists");
         }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred. " + e.getMessage());
+        }
+    }
+
+	@PostMapping("/addtonetbox")
+    public void AddApInfoToNetbox(String location, String sn, String mac) throws IOException, InterruptedException {
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+        String siteId = (location);
+        
     }
 
     // TODO; CREATE SEPARATE METHOD FOR ZEEP
@@ -717,17 +820,14 @@ public class testController {
             try {
                 zabbix_url = new URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
             } catch (MalformedURLException e2) {
-                // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
             String auth = null;
             try {
                 auth = zabbixRPC.Authentication(zabbix_url);
             } catch (IOException e2) {
-                // TODO Auto-generated catch block
                 e2.printStackTrace();
             } catch (JSONException e2) {
-                // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
     
@@ -739,10 +839,8 @@ public class testController {
                 try {
                     hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
                 } catch (IOException e2) {
-                    // TODO Auto-generated catch block
                     e2.printStackTrace();
                 } catch (JSONException e2) {
-                    // TODO Auto-generated catch block
                     e2.printStackTrace();
                 }
                 System.out.println(hostid);
@@ -754,10 +852,8 @@ public class testController {
                             try {
                                 items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                             } catch (IOException e1) {
-                                // TODO Auto-generated catch block
                                 e1.printStackTrace();
                             } catch (JSONException e1) {
-                                // TODO Auto-generated catch block
                                 e1.printStackTrace();
                             }
                             StringBuilder ItemsInHost = new StringBuilder();
@@ -767,14 +863,12 @@ public class testController {
                                     try {
                                         current_item = items.getJSONObject(i);
                                     } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                     String itemkey = "null";
                                     try {
                                         itemkey = current_item.get("key_").toString();
                                     } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                     ItemsInHost.append( itemkey + ";");
@@ -783,17 +877,14 @@ public class testController {
                                     try {
                                         zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                     } catch (IOException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }else{
                                     try {
                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                     } catch (IOException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
@@ -801,10 +892,8 @@ public class testController {
                                 try {
                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                 } catch (IOException e) {
-                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 } catch (JSONException e) {
-                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 }
                             }
@@ -813,10 +902,8 @@ public class testController {
                             try {
                                 zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                             } catch (IOException e) {
-                                // TODO Auto-generated catch block
                                 e.printStackTrace();
                             } catch (JSONException e) {
-                                // TODO Auto-generated catch block
                                 e.printStackTrace();
                             }
                         }
@@ -836,10 +923,8 @@ public class testController {
                                 try {
                                     items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                                 } catch (IOException e1) {
-                                    // TODO Auto-generated catch block
                                     e1.printStackTrace();
                                 } catch (JSONException e1) {
-                                    // TODO Auto-generated catch block
                                     e1.printStackTrace();
                                 }
                                 StringBuilder ItemsInHost = new StringBuilder();
@@ -849,14 +934,12 @@ public class testController {
                                         try {
                                             current_item = items.getJSONObject(i);
                                         } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                         String itemkey = "null";
                                         try {
                                             itemkey = current_item.get("key_").toString();
                                         } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                         ItemsInHost.append( itemkey + ";");
@@ -865,17 +948,14 @@ public class testController {
                                         try {
                                             zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                         } catch (IOException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }else{
                                         try {
                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                         } catch (IOException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }
@@ -883,10 +963,8 @@ public class testController {
                                     try {
                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                     } catch (IOException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
@@ -895,10 +973,8 @@ public class testController {
                                 try {
                                     zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                                 } catch (IOException e) {
-                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 } catch (JSONException e) {
-                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 }
                             }
@@ -912,10 +988,8 @@ public class testController {
                                     try {
                                         items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                                     } catch (IOException e1) {
-                                        // TODO Auto-generated catch block
                                         e1.printStackTrace();
                                     } catch (JSONException e1) {
-                                        // TODO Auto-generated catch block
                                         e1.printStackTrace();
                                     }
                                     StringBuilder ItemsInHost = new StringBuilder();
@@ -925,14 +999,12 @@ public class testController {
                                             try {
                                                 current_item = items.getJSONObject(i);
                                             } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                             String itemkey = "null";
                                             try {
                                                 itemkey = current_item.get("key_").toString();
                                             } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                             ItemsInHost.append( itemkey + ";");
@@ -941,17 +1013,14 @@ public class testController {
                                             try {
                                                 zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                             } catch (IOException e) {
-                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                         }else{
                                             try {
                                                 zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                             } catch (IOException e) {
-                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                         }
@@ -959,10 +1028,8 @@ public class testController {
                                         try {
                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                         } catch (IOException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }
@@ -971,10 +1038,8 @@ public class testController {
                                     try {
                                         zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                                     } catch (IOException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
