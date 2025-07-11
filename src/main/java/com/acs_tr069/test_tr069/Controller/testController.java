@@ -802,16 +802,18 @@ public class testController {
         headers.set("Authorization", "Bearer " + netboxAuthToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = new HashMap<>(Map.of(
-            "name", device,
-            "device_role", 3,
-            "device_type", 105,
-            "serial_number", sn,
-            "site", siteId,
-            "tenant", 16,
-            "status", "active"
-        ));
-        requestBody.put("custom_fields", Map.of("mac_address", mac));
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("name", device);
+        requestBody.put("device_role", 3);
+        requestBody.put("device_type", 105);
+        requestBody.put("serial_number", sn);
+        requestBody.put("site", siteId);
+        requestBody.put("tenant", 16);
+        requestBody.put("status", "active");
+
+        Map<String, Object> customFields = new HashMap<>();
+        customFields.put("mac_address", mac);
+        requestBody.put("custom_fields", customFields);
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
