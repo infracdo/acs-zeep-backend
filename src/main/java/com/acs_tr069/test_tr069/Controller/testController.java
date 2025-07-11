@@ -861,14 +861,17 @@ public class testController {
             try {
                 zabbix_url = new URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
             } catch (MalformedURLException e2) {
+                // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
             String auth = null;
             try {
                 auth = zabbixRPC.Authentication(zabbix_url);
             } catch (IOException e2) {
+                // TODO Auto-generated catch block
                 e2.printStackTrace();
             } catch (JSONException e2) {
+                // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
     
@@ -880,8 +883,10 @@ public class testController {
                 try {
                     hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
                 } catch (IOException e2) {
+                    // TODO Auto-generated catch block
                     e2.printStackTrace();
                 } catch (JSONException e2) {
+                    // TODO Auto-generated catch block
                     e2.printStackTrace();
                 }
                 System.out.println(hostid);
@@ -893,8 +898,10 @@ public class testController {
                             try {
                                 items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                             } catch (IOException e1) {
+                                // TODO Auto-generated catch block
                                 e1.printStackTrace();
                             } catch (JSONException e1) {
+                                // TODO Auto-generated catch block
                                 e1.printStackTrace();
                             }
                             StringBuilder ItemsInHost = new StringBuilder();
@@ -904,12 +911,14 @@ public class testController {
                                     try {
                                         current_item = items.getJSONObject(i);
                                     } catch (JSONException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                     String itemkey = "null";
                                     try {
                                         itemkey = current_item.get("key_").toString();
                                     } catch (JSONException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                     ItemsInHost.append( itemkey + ";");
@@ -918,14 +927,17 @@ public class testController {
                                     try {
                                         zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                     } catch (IOException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }else{
                                     try {
                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                     } catch (IOException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
@@ -933,8 +945,10 @@ public class testController {
                                 try {
                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                 } catch (IOException e) {
+                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 } catch (JSONException e) {
+                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 }
                             }
@@ -943,8 +957,10 @@ public class testController {
                             try {
                                 zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                             } catch (IOException e) {
+                                // TODO Auto-generated catch block
                                 e.printStackTrace();
                             } catch (JSONException e) {
+                                // TODO Auto-generated catch block
                                 e.printStackTrace();
                             }
                         }
@@ -964,8 +980,10 @@ public class testController {
                                 try {
                                     items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                                 } catch (IOException e1) {
+                                    // TODO Auto-generated catch block
                                     e1.printStackTrace();
                                 } catch (JSONException e1) {
+                                    // TODO Auto-generated catch block
                                     e1.printStackTrace();
                                 }
                                 StringBuilder ItemsInHost = new StringBuilder();
@@ -975,12 +993,14 @@ public class testController {
                                         try {
                                             current_item = items.getJSONObject(i);
                                         } catch (JSONException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                         String itemkey = "null";
                                         try {
                                             itemkey = current_item.get("key_").toString();
                                         } catch (JSONException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                         ItemsInHost.append( itemkey + ";");
@@ -989,14 +1009,17 @@ public class testController {
                                         try {
                                             zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                         } catch (IOException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }else{
                                         try {
                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                         } catch (IOException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         } catch (JSONException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }
@@ -1004,8 +1027,10 @@ public class testController {
                                     try {
                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                     } catch (IOException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
@@ -1014,8 +1039,10 @@ public class testController {
                                 try {
                                     zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                                 } catch (IOException e) {
+                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 } catch (JSONException e) {
+                                    // TODO Auto-generated catch block
                                     e.printStackTrace();
                                 }
                             }
@@ -1029,8 +1056,10 @@ public class testController {
                                     try {
                                         items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
                                     } catch (IOException e1) {
+                                        // TODO Auto-generated catch block
                                         e1.printStackTrace();
                                     } catch (JSONException e1) {
+                                        // TODO Auto-generated catch block
                                         e1.printStackTrace();
                                     }
                                     StringBuilder ItemsInHost = new StringBuilder();
@@ -1040,12 +1069,14 @@ public class testController {
                                             try {
                                                 current_item = items.getJSONObject(i);
                                             } catch (JSONException e) {
+                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                             String itemkey = "null";
                                             try {
                                                 itemkey = current_item.get("key_").toString();
                                             } catch (JSONException e) {
+                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                             ItemsInHost.append( itemkey + ";");
@@ -1054,14 +1085,17 @@ public class testController {
                                             try {
                                                 zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
                                             } catch (IOException e) {
+                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                         }else{
                                             try {
                                                 zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                             } catch (IOException e) {
+                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             } catch (JSONException e) {
+                                                // TODO Auto-generated catch block
                                                 e.printStackTrace();
                                             }
                                         }
@@ -1069,8 +1103,10 @@ public class testController {
                                         try {
                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
                                         } catch (IOException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         } catch (JSONException e) {
+                                            // TODO Auto-generated catch block
                                             e.printStackTrace();
                                         }
                                     }
@@ -1079,8 +1115,10 @@ public class testController {
                                     try {
                                         zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
                                     } catch (IOException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     } catch (JSONException e) {
+                                        // TODO Auto-generated catch block
                                         e.printStackTrace();
                                     }
                                 }
@@ -1117,7 +1155,7 @@ public class testController {
         //UpdateItem();
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
+
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
         /*
