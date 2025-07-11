@@ -11,7 +11,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "accounting")
+@Table(name = "accounting", schema = "public")
 public class Accounting {
 
     @Column(name = "username")

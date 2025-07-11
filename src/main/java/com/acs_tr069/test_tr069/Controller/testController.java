@@ -1,28 +1,21 @@
 package com.acs_tr069.test_tr069.Controller;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import org.springframework.http.HttpHeaders;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.soap.SOAPBody;
@@ -32,6 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.configurationprocessor.json.JSONArray;
 import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,10 +40,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
-import org.yaml.snakeyaml.events.Event.ID;
-
 import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
 import com.acs_tr069.test_tr069.CWMPResponses.GetSoapFromString;
 import com.acs_tr069.test_tr069.Entity.httprequestlog;
@@ -74,8 +70,9 @@ import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 
 import com.acs_tr069.test_tr069.StoreRequestResult.GetResponseResult;
 import com.acs_tr069.test_tr069.UDP.udp_sender;
-import com.acs_tr069.test_tr069.UDP.udp_server;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
+import com.acs_tr069.test_tr069.radius.entity.AllowedNasMacAddress;
+import com.acs_tr069.test_tr069.radius.repository.AllowedNasMacAddressRepository;
 import com.google.common.base.Charsets;
 import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 
@@ -83,6 +80,8 @@ import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 @RestController
 public class testController {
 
+    @Autowired
+    private Environment env;
     @Autowired
     private httplogreqRepo httplogreqRepo;
     @Autowired
@@ -103,6 +102,8 @@ public class testController {
     private groupsRepository group_repo;
     @Autowired
     private auto_completeRepository auto_completeRepo;
+    @Autowired
+    private AllowedNasMacAddressRepository allowedNasMacAddressRepository;
 
     String cwmpheader = null;
     String Output = null;
@@ -113,7 +114,11 @@ public class testController {
     private GetSoapFromString getSoap;
     private RandomCodeGen randomGen;
     private ZabbixApiRPCCalls zabbixRPC;
-    private udp_sender sendudp_request;     
+    private udp_sender sendudp_request;
+
+    testController(AllowedNasMacAddressRepository allowedNasMacAddressRepository) {
+        this.allowedNasMacAddressRepository = allowedNasMacAddressRepository;
+    }     
     /*
     public void setup() throws SocketException{
         System.out.println("UDP server start");
@@ -126,6 +131,8 @@ public class testController {
         new udp_server().start();
     }
     */
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
@@ -310,6 +317,7 @@ public class testController {
         }, "logging " + serial_num).start();
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void CheckDeviceEventCode(String Payload) {
         //System.out.println(LocalTime.now() + "Current Thread: " + Thread.currentThread().getName());
         new Thread(() -> {
@@ -402,6 +410,7 @@ public class testController {
         }, "CheckEvent").start();
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void Bootstraping(String serial_num) {
         new Thread(() -> {
             // search and destroy accesspoint objects
@@ -507,6 +516,18 @@ public class testController {
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                     device_to_bootstrap.setstatus("synced");
                     device_front.save(device_to_bootstrap);
+                    
+                    // add info to radius
+                    String mac = device_to_bootstrap.getmac_address();
+                    String ssid = device_to_bootstrap.getdevice_name();
+
+                    String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
+                    String calledStationId = cleanedMac + ":" + ssid;
+                    System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
+                    AddApInfoToRadius(calledStationId);
+
+                    // add info to netbox
+                    
                     break;
                 }
             }
@@ -640,6 +661,7 @@ public class testController {
         }
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void ApplyOldCommand(String serial_num, String device_group) {
         List<group_command> CommandsInGroup = GroupCommandRepo.findByParent(device_group);
         devices currentDevice = devicesRepo.gEntityBySerialnum(serial_num);
@@ -679,6 +701,151 @@ public class testController {
             DeviceSN = httplogreqRepo.getByCookie(currentCookie).get_SN();
         }
         return DeviceSN;
+    }
+
+	@GetMapping("/findNetboxSiteName") 
+    public String FindSiteByName(@RequestParam String sitename) throws IOException, InterruptedException { // checks if site name exists, returns site id or error message
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+        String url = netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Token " + netboxAuthToken);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+
+        if (response.getStatusCodeValue() == 200) {
+            try {
+                JSONObject jsonobject = new JSONObject(response.getBody());
+                JSONArray results = jsonobject.getJSONArray("results");
+                if (results.length() > 0) {
+                    int id = results.getJSONObject(0).getInt("id");
+                    return String.valueOf(id);  
+                } else {
+                    return "NOT FOUND"; 
+                }
+            } catch (JSONException e) {
+                return "JSON ERROR";
+            }
+        } else {
+            return "ERROR CODE " + response.getStatusCodeValue();
+        }
+    }
+
+    @GetMapping("/createNetboxSite")
+    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // creates site in acs zeep tenant, returns site id
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>();
+
+        requestBody.put("name", sitename);
+        requestBody.put("slug", "acs-zeep");
+        requestBody.put("tenant", 16);
+        requestBody.put("status", "active");
+        requestBody.put("description", "Access Points located at CDO");
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+
+        System.out.println("response body " + response.getBody());
+        
+        if (response.getStatusCodeValue() == 200) {
+            try {
+                JSONObject json = new JSONObject(response.getBody());
+                if (json.has("id")) {
+                    return String.valueOf(json.getInt("id")); // return id as string
+                }
+            } catch (JSONException e) {
+                return "JSON ERROR";
+            }
+        } 
+        return "ERROR CODE " + response.getStatusCodeValue();
+    }
+
+	@PostMapping("/adddevicetonetbox")
+    public String AddApInfoToNetbox(@RequestParam String site,
+        @RequestParam String device,
+        @RequestParam String sn,
+        @RequestParam String mac
+    ) throws IOException, InterruptedException {
+        // GET SITE ID FIRST
+        String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
+        Integer siteId = null;
+
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if site exists, retrieve site id
+            siteId = Integer.valueOf(siteIdAsString); 
+        } else { // if it doesnt exist, create new site
+            siteIdAsString = CreateSite(site);
+        }
+
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if site creation successful, retrieve site id
+            siteId = Integer.valueOf(siteIdAsString); 
+        } 
+
+        // CREATE DEVICE 
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("name", device);
+        requestBody.put("device_role", 3);
+        requestBody.put("device_type", 105);
+        requestBody.put("serial_number", sn);
+        requestBody.put("site", siteId);
+        requestBody.put("tenant", 16);
+        requestBody.put("status", "active");
+
+        Map<String, Object> customFields = new HashMap<>();
+        customFields.put("mac_address", mac);
+        requestBody.put("custom_fields", customFields);
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+
+        System.out.println("response body " + response.getBody());
+        return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
+    }
+
+	@PostMapping("/adddevicetoradius")
+    public ResponseEntity<?> AddApInfoToRadius(@RequestParam String calledStationId) {
+        try {
+            Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
+        System.out.println(optionalAddress.isPresent() ? "Mac address already exists" : "Mac address does not exist");
+
+        if (!optionalAddress.isPresent()) {
+            AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
+            newAddress.setCalledStationId(calledStationId);
+            allowedNasMacAddressRepository.save(newAddress);
+
+            return ResponseEntity.ok("Mac address added successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Mac address already exists");
+        }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred. " + e.getMessage());
+        }
     }
 
     @Scheduled(fixedRate = 60000)
@@ -1019,7 +1186,7 @@ public class testController {
                 }
             } 
             
-            if(curent_device.getstatus().contains("syncing")==false){
+            if(curent_device.getstatus() != null && !"syncing".equalsIgnoreCase(curent_device.getstatus())){
                 if(interval>3){
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
                     LocalDateTime now = LocalDateTime.now();
@@ -1064,6 +1231,8 @@ public class testController {
             httplogreqRepo.save(newHttpLog);
         }
     }
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void UpdateDeviceDetail(String Payload) throws JSONException{
         SOAPBody InformData = null;
         Integer NumData = 0;
@@ -1105,7 +1274,7 @@ public class testController {
         }
     }
 
-    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void UpdateDevicesTable(String Payload) throws JSONException {
         //DevicesGet
         /*
@@ -1193,6 +1362,7 @@ public class testController {
     //############################################################################
 
     //@RequestMapping(value="/TestSendConnectionRequest/{SN}")
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void SendUDPRequest(@PathVariable String SN) throws IOException{
         
         new Thread(()->{
@@ -1258,8 +1428,9 @@ public class testController {
     //############################################################################
     //SaveTask
     //############################################################################
-
-    public void SaveTask(String SN, String Method,String Parameters,String Optional){
+    
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
+    public void SaveTask(String SN, String Method,String Parameters,String Optional){ 
         taskhandler newTasK = new taskhandler();
         newTasK.set_SN(SN);
         newTasK.set_method(Method);
@@ -1507,7 +1678,7 @@ public class testController {
     }
   
     @RequestMapping(value="/Reboot/{SerialNum}")
-    public String Reboot(@PathVariable String SerialNum) {
+    public String Reboot(@PathVariable String SerialNum) { 
         SaveTask(SerialNum, "Reboot", "None", "None");
         return "Task Added";
     }
@@ -1598,6 +1769,7 @@ public class testController {
         return result;
     }
 
+    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @RequestMapping(value="/CliAutoComplete/ {SerialNum}")
     public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )
             throws JSONException 
@@ -1908,7 +2080,7 @@ public class testController {
         device _device = deviceData.get();
         _device.setdevice_name(Device.getdevice_name());
         _device.setparent(Device.getparent());
-        _device.setlocation(Device.getlocation());
+        _device.setlocation(Device.getlocation()); 
         _device.setmac_address(Device.getmac_address());
         _device.setserial_number(Device.getserial_number());
         _device.setdate_created(Device.getdate_created());

@@ -9,7 +9,7 @@ import javax.persistence.Column;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "`groups`")	
+@Table(name = "`groups`")
 public class groups {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

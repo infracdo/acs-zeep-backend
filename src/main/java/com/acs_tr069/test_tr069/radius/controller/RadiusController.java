@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,12 +21,8 @@ import com.acs_tr069.test_tr069.radius.service.RadiusService;
 @CrossOrigin("*")
 public class RadiusController {
 
-    private final RadiusService radiusService;
-
-    public RadiusController(RadiusService radiusService) {
-        this.radiusService = radiusService;
-    }
-
+    @Autowired
+    private RadiusService radiusService;
 
     // Get number of currently connected users
     @GetMapping("count-currently-connected-users")
