@@ -779,7 +779,11 @@ public class testController {
     }
 
 	@PostMapping("/adddevicetonetbox")
-    public void AddApInfoToNetbox(String site, String device, String sn, String mac) throws IOException, InterruptedException {
+    public String AddApInfoToNetbox(@RequestParam String site,
+        @RequestParam String device,
+        @RequestParam String sn,
+        @RequestParam String mac
+    ) throws IOException, InterruptedException {
         // GET SITE ID FIRST
         String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
         Integer siteId = null;
@@ -802,16 +806,18 @@ public class testController {
         headers.set("Authorization", "Bearer " + netboxAuthToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = new HashMap<>(Map.of(
-            "name", device,
-            "device_role", 3,
-            "device_type", 105,
-            "serial_number", sn,
-            "site", siteId,
-            "tenant", 16,
-            "status", "active"
-        ));
-        requestBody.put("custom_fields", Map.of("mac_address", mac));
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("name", device);
+        requestBody.put("device_role", 3);
+        requestBody.put("device_type", 105);
+        requestBody.put("serial_number", sn);
+        requestBody.put("site", siteId);
+        requestBody.put("tenant", 16);
+        requestBody.put("status", "active");
+
+        Map<String, Object> customFields = new HashMap<>();
+        customFields.put("mac_address", mac);
+        requestBody.put("custom_fields", customFields);
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
@@ -819,6 +825,7 @@ public class testController {
         ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
         System.out.println("response body " + response.getBody());
+        return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
     }
 
 	@PostMapping("/adddevicetoradius")
