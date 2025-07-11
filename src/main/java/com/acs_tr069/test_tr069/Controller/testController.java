@@ -116,9 +116,6 @@ public class testController {
     private ZabbixApiRPCCalls zabbixRPC;
     private udp_sender sendudp_request;
 
-    testController(AllowedNasMacAddressRepository allowedNasMacAddressRepository) {
-        this.allowedNasMacAddressRepository = allowedNasMacAddressRepository;
-    }     
     /*
     public void setup() throws SocketException{
         System.out.println("UDP server start");
@@ -1157,6 +1154,11 @@ public class testController {
 
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
+
+        if (httplogreqRepo == null || device_front == null ) {
+            System.err.println("ERROR httplogreq/device repository not initialized yet");
+            return;
+        }
         /*
         List<group_command> CommandsInGroup = GroupCommandRepo.findByParent("/apollo");
         for(int i=0; i<CommandsInGroup.size();i++){
@@ -1174,12 +1176,12 @@ public class testController {
                 timeInterval = currentTime.getTime() - httprequestlog.get_lastRequest().getTime();    
             } catch (Exception e) {
                 timeInterval = (long) (60000*5);
-                //TODO: handle exception
             }
             
             interval = timeInterval/60000;
             device curent_device = null;
             while(true){
+                if (httprequestlog.get_SN() == null) continue;
                 if(httprequestlog.get_SN()!=null){
                     curent_device = device_front.getBySerialNum(httprequestlog.get_SN());
                     break;
@@ -1442,7 +1444,7 @@ public class testController {
     public void UpdateDeviceStatus(String SerialNum, String Status){
         device devicestat = device_front.getBySerialNum(SerialNum);
         //System.out.println(devicestat.getstatus());
-        if(devicestat.getstatus().contains("syncing")==false){
+        if(devicestat.getstatus() != null && !devicestat.getstatus().contains("syncing")){
             devicestat.setstatus(Status);
         }
         device_front.save(devicestat);
