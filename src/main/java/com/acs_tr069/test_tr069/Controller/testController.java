@@ -1187,7 +1187,7 @@ public class testController {
                 }
             } 
             
-            if(curent_device.getstatus().contains("syncing")==false){
+            if(curent_device.getstatus() != null && !"syncing".equalsIgnoreCase(curent_device.getstatus())){
                 if(interval>3){
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
                     LocalDateTime now = LocalDateTime.now();
