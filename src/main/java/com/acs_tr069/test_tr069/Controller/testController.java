@@ -779,7 +779,11 @@ public class testController {
     }
 
 	@PostMapping("/adddevicetonetbox")
-    public void AddApInfoToNetbox(String site, String device, String sn, String mac) throws IOException, InterruptedException {
+    public String AddApInfoToNetbox(@RequestParam String site,
+        @RequestParam String device,
+        @RequestParam String sn,
+        @RequestParam String mac
+    ) throws IOException, InterruptedException {
         // GET SITE ID FIRST
         String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
         Integer siteId = null;
@@ -821,6 +825,7 @@ public class testController {
         ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
         System.out.println("response body " + response.getBody());
+        return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
     }
 
 	@PostMapping("/adddevicetoradius")
