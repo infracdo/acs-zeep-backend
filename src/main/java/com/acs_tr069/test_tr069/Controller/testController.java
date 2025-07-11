@@ -711,8 +711,8 @@ public class testController {
         return DeviceSN;
     }
 
-	@GetMapping("/getNetboxSiteId") // BUG; JAVA.NET.HTTP IS NOT SUPPORTED IN JAVA 8, NEED TO USE RESTTEMPLATE
-    public String GetSiteId(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
+	@GetMapping("/findNetboxSiteName") 
+    public String FindSiteByName(@RequestParam String sitename) throws IOException, InterruptedException { // checks if site name exists, returns site id or error message
         String netboxApiUrl = env.getProperty("netbox.api.url");
         String netboxAuthToken = env.getProperty("netbox.auth.token");
         String url = netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
@@ -734,8 +734,13 @@ public class testController {
         if (response.getStatusCodeValue() == 200) {
             try {
                 JSONObject jsonobject = new JSONObject(response.getBody());
-                int count = jsonobject.getInt("count");
-                return String.valueOf(count);
+                JSONArray results = jsonobject.getJSONArray("results");
+                if (results.length() > 0) {
+                    int id = results.getJSONObject(0).getInt("id");
+                    return String.valueOf(id);  
+                } else {
+                    return "NOT FOUND"; 
+                }
             } catch (JSONException e) {
                 return "JSON ERROR";
             }
@@ -745,7 +750,7 @@ public class testController {
     }
 
     @GetMapping("/createNetboxSite")
-    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // retrieves site id of site name, creates site first if it does not exist
+    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // creates site in acs zeep tenant, returns site id
         String netboxApiUrl = env.getProperty("netbox.api.url");
         String netboxAuthToken = env.getProperty("netbox.auth.token");
 
@@ -781,7 +786,50 @@ public class testController {
         return "ERROR CODE " + response.getStatusCodeValue();
     }
 
-	@PostMapping("/addtoradius")
+	@PostMapping("/adddevicetonetbox")
+    public void AddApInfoToNetbox(String site, String device, String sn, String mac) throws IOException, InterruptedException {
+        // GET SITE ID FIRST
+        String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
+        Integer siteId = null;
+
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if site exists, retrieve site id
+            siteId = Integer.valueOf(siteIdAsString); 
+        } else { // if it doesnt exist, create new site
+            siteIdAsString = CreateSite(site);
+        }
+
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if site creation successful, retrieve site id
+            siteId = Integer.valueOf(siteIdAsString); 
+        } 
+
+        // CREATE DEVICE 
+        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxAuthToken = env.getProperty("netbox.auth.token");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>(Map.of(
+            "name", device,
+            "device_role", 3,
+            "device_type", 105,
+            "serial_number", sn,
+            "site", siteId,
+            "tenant", 16,
+            "status", "active"
+        ));
+        requestBody.put("custom_fields", Map.of("mac_address", mac));
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+
+        System.out.println("response body " + response.getBody());
+    }
+
+	@PostMapping("/adddevicetoradius")
     public ResponseEntity<?> AddApInfoToRadius(@RequestParam String calledStationId) {
         try {
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
@@ -801,15 +849,6 @@ public class testController {
         }
     }
 
-	@PostMapping("/addtonetbox")
-    public void AddApInfoToNetbox(String location, String sn, String mac) throws IOException, InterruptedException {
-        String netboxApiUrl = env.getProperty("netbox.api.url");
-        String netboxAuthToken = env.getProperty("netbox.auth.token");
-        String siteId = (location);
-        
-    }
-
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @Scheduled(fixedRate = 60000)
     private void ZabbixAPI_Test() throws IOException, JSONException {
         /*
