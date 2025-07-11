@@ -1154,6 +1154,11 @@ public class testController {
 
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
+
+        if (httplogreqRepo == null || device_front == null ) {
+            System.err.println("ERROR httplogreq/device repository not initialized yet");
+            return;
+        }
         /*
         List<group_command> CommandsInGroup = GroupCommandRepo.findByParent("/apollo");
         for(int i=0; i<CommandsInGroup.size();i++){
