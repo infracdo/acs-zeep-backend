@@ -21,10 +21,12 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.soap.SOAPBody;
 import javax.xml.soap.SOAPException;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.configurationprocessor.json.JSONArray;
-import org.springframework.boot.configurationprocessor.json.JSONException;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -115,6 +117,14 @@ public class testController {
     private RandomCodeGen randomGen;
     private ZabbixApiRPCCalls zabbixRPC;
     private udp_sender sendudp_request;
+
+    private volatile boolean appReady = false;
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        appReady = true;
+        System.out.println("Application ready, scheduled tasks can start");
+    }
 
     /*
     public void setup() throws SocketException{
@@ -852,6 +862,10 @@ public class testController {
             item type 0 is numeric(float)
         */
         new Thread(()->{
+            if (!appReady) {
+                System.out.println("Skipping scheduled run of ZabbixAPI_Test, app not ready");
+                return;  // Skip running before initialization
+            }
             String group_id = "213";
             URL zabbix_url = null;
             try {
@@ -1154,6 +1168,10 @@ public class testController {
 
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
+        if (!appReady) {
+            System.out.println("Skipping scheduled run of DeviceStatusUpdate, app not ready");
+            return;  // Skip running before initialization
+        }
 
         if (httplogreqRepo == null || device_front == null ) {
             System.err.println("ERROR httplogreq/device repository not initialized yet");
