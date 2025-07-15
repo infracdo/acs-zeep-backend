@@ -522,6 +522,7 @@ public class testController {
                 if (NumRemainingTask < 1) {
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                     device_to_bootstrap.setstatus("synced");
+                    device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
                     
                     // add info to radius
@@ -1203,10 +1204,11 @@ public class testController {
                     curent_device.setdate_offline(dtf.format(now));
                     device_front.save(curent_device);
                     UpdateDeviceStatus(httprequestlog.get_SN(), "offline");
+                    System.out.println("Saved to database: " + curent_device.getId());
                     if(curent_device.getparent().matches("unassigned")){
                         device_front.delete(curent_device);
+                        System.out.println("Removed from database: " + curent_device.getId());
                     }
-                    System.out.println("Saved to database: " + curent_device.getId());
                 }
                 else{
                     UpdateDeviceStatus(httprequestlog.get_SN(), "online");
@@ -1313,7 +1315,7 @@ public class testController {
             unassigned_device.setmodel(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
             unassigned_device.setstatus("online");
             unassigned_device.setparent("unassigned");
-            
+            unassigned_device.setdate_created(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
             //newDevice.set_date_modified(LocalTime.now().toString());
             //if(newDevice.getstatus().contains("syncing")==false){
             //    newDevice.setstatus("online");
@@ -1330,6 +1332,7 @@ public class testController {
             if(newDevice.getstatus().contains("syncing")==false){
                 newDevice.setstatus("online");
             }
+            newDevice.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
             newDevice.setactivated(true);
             device_front.save(newDevice);
         }
@@ -1959,7 +1962,7 @@ public class testController {
 	@PostMapping("/adddevice")
 	public device postGroup(@RequestBody device DEVICE) {
 
-        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), DEVICE.getdate_created(), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
+        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
 		return Device;
     }
 
@@ -2082,7 +2085,7 @@ public class testController {
         _device.setmac_address(Device.getmac_address());
         _device.setserial_number(Device.getserial_number());
         _device.setdate_created(Device.getdate_created());
-        _device.setdate_modified(Device.getdate_modified());
+        _device.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
         _device.setdevice_type(Device.getdevice_type());
         return new ResponseEntity<>(device_front.save(_device), HttpStatus.OK);
       } else {
