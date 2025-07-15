@@ -855,335 +855,325 @@ public class testController {
         }
     }
 
-    @Scheduled(fixedRate = 60000)
-    private void ZabbixAPI_Test() throws IOException, JSONException {
-        /*
-            item type 4 is text
-            item type 0 is numeric(float)
-        */
-        new Thread(()->{
-            if (!appReady) {
-                System.out.println("Skipping scheduled run of ZabbixAPI_Test, app not ready");
-                return;  // Skip running before initialization
-            }
-            String group_id = "213";
-            URL zabbix_url = null;
-            try {
-                zabbix_url = new URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
-            } catch (MalformedURLException e2) {
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            }
-            String auth = null;
-            try {
-                auth = zabbixRPC.Authentication(zabbix_url);
-            } catch (IOException e2) {
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            } catch (JSONException e2) {
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            }
+    // @Scheduled(fixedRate = 60000)
+    // private void ZabbixAPI_Test() throws IOException, JSONException {
+    //     /*
+    //         item type 4 is text
+    //         item type 0 is numeric(float)
+    //     */
+    //     new Thread(()->{
+    //         if (!appReady) {
+    //             System.out.println("Skipping scheduled run of ZabbixAPI_Test, app not ready");
+    //             return;  // Skip running before initialization
+    //         }
+    //         String group_id = "213";
+    //         URL zabbix_url = null;
+    //         try {
+    //             zabbix_url = new URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
+    //         } catch (MalformedURLException e2) {
+    //             // TODO Auto-generated catch block
+    //             e2.printStackTrace();
+    //         }
+    //         String auth = null;
+    //         try {
+    //             auth = zabbixRPC.Authentication(zabbix_url);
+    //         } catch (IOException e2) {
+    //             // TODO Auto-generated catch block
+    //             e2.printStackTrace();
+    //         } catch (JSONException e2) {
+    //             // TODO Auto-generated catch block
+    //             e2.printStackTrace();
+    //         }
     
             
-            Iterable<device> device_list = device_front.findAll();
-            for (device device : device_list) {
-                String device_name = device.getdevice_name();
-                String hostid = null;
-                try {
-                    hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
-                } catch (IOException e2) {
-                    // TODO Auto-generated catch block
-                    e2.printStackTrace();
-                } catch (JSONException e2) {
-                    // TODO Auto-generated catch block
-                    e2.printStackTrace();
-                }
-                System.out.println(hostid);
-                if(device.getstatus()!=null){
-                    if(device.getstatus().matches("offline")){
-                        //System.out.println(hostid);
-                        if(hostid != null){
-                            JSONArray items = null;
-                            try {
-                                items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-                            } catch (IOException e1) {
-                                // TODO Auto-generated catch block
-                                e1.printStackTrace();
-                            } catch (JSONException e1) {
-                                // TODO Auto-generated catch block
-                                e1.printStackTrace();
-                            }
-                            StringBuilder ItemsInHost = new StringBuilder();
-                            if(items != null){
-                                for(int i=0;i<items.length();i++){
-                                    JSONObject current_item = null;
-                                    try {
-                                        current_item = items.getJSONObject(i);
-                                    } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                    String itemkey = "null";
-                                    try {
-                                        itemkey = current_item.get("key_").toString();
-                                    } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                    ItemsInHost.append( itemkey + ";");
-                                }
-                                if(ItemsInHost.toString().contains("device.status")){
-                                    try {
-                                        zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-                                    } catch (IOException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                }else{
-                                    try {
-                                        zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                    } catch (IOException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }else{
-                                try {
-                                    zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                } catch (IOException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                } catch (JSONException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        else{
-                            try {
-                                zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-                            } catch (IOException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                            } catch (JSONException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                            }
-                        }
-                        httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
-                        currentlog.set_device_status(device.getstatus());
-                        httplogreqRepo.save(currentlog);
-                    }
-                    if(device.getstatus().matches("online")){
-                        httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
+    //         Iterable<device> device_list = device_front.findAll();
+    //         for (device device : device_list) {
+    //             String device_name = device.getdevice_name();
+    //             String hostid = null;
+    //             try {
+    //                 hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
+    //             } catch (IOException e2) {
+    //                 // TODO Auto-generated catch block
+    //                 e2.printStackTrace();
+    //             } catch (JSONException e2) {
+    //                 // TODO Auto-generated catch block
+    //                 e2.printStackTrace();
+    //             }
+    //             System.out.println("host id: " + hostid);
+    //             if(device.getstatus()!=null){
+    //                 if(device.getstatus().matches("offline")){
+    //                     //System.out.println(hostid);
+    //                     if(hostid != null){
+    //                         JSONArray items = null;
+    //                         try {
+    //                             items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    //                         } catch (IOException e1) {
+    //                             // TODO Auto-generated catch block
+    //                             e1.printStackTrace();
+    //                         } catch (JSONException e1) {
+    //                             // TODO Auto-generated catch block
+    //                             e1.printStackTrace();
+    //                         }
+    //                         StringBuilder ItemsInHost = new StringBuilder();
+    //                         if(items != null){
+    //                             for(int i=0;i<items.length();i++){
+    //                                 JSONObject current_item = null;
+    //                                 try {
+    //                                     current_item = items.getJSONObject(i);
+    //                                 } catch (JSONException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                                 String itemkey = "null";
+    //                                 try {
+    //                                     itemkey = current_item.get("key_").toString();
+    //                                 } catch (JSONException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                                 ItemsInHost.append( itemkey + ";");
+    //                             }
+    //                             if(ItemsInHost.toString().contains("device.status")){
+    //                                 try {
+    //                                     zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    //                                 } catch (IOException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                             }else{
+    //                                 try {
+    //                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                                 } catch (IOException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 } catch (JSONException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                             }
+    //                         }else{
+    //                             try {
+    //                                 zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                             } catch (IOException e) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e.printStackTrace();
+    //                             } catch (JSONException e) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e.printStackTrace();
+    //                             }
+    //                         }
+    //                     }
+    //                     else{
+    //                         try {
+    //                             zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
+    //                         } catch (IOException e) {
+    //                             // TODO Auto-generated catch block
+    //                             e.printStackTrace();
+    //                         } catch (JSONException e) {
+    //                             // TODO Auto-generated catch block
+    //                             e.printStackTrace();
+    //                         }
+    //                     }
+    //                     httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
+    //                     currentlog.set_device_status(device.getstatus());
+    //                     httplogreqRepo.save(currentlog);
+    //                 }
+    //                 if(device.getstatus().matches("online")){
+    //                     httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
         
-                        if(currentlog.get_device_status() == null){
-                            currentlog.set_device_status(device.getstatus());
-                            httplogreqRepo.save(currentlog);
-                            //System.out.println(hostid);
-                            if(hostid != null){
-                                JSONArray items = null;
-                                try {
-                                    items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-                                } catch (IOException e1) {
-                                    // TODO Auto-generated catch block
-                                    e1.printStackTrace();
-                                } catch (JSONException e1) {
-                                    // TODO Auto-generated catch block
-                                    e1.printStackTrace();
-                                }
-                                StringBuilder ItemsInHost = new StringBuilder();
-                                if(items != null){
-                                    for(int i=0;i<items.length();i++){
-                                        JSONObject current_item = null;
-                                        try {
-                                            current_item = items.getJSONObject(i);
-                                        } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        }
-                                        String itemkey = "null";
-                                        try {
-                                            itemkey = current_item.get("key_").toString();
-                                        } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        }
-                                        ItemsInHost.append( itemkey + ";");
-                                    }
-                                    if(ItemsInHost.toString().contains("device.status")){
-                                        try {
-                                            zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-                                        } catch (IOException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        }
-                                    }else{
-                                        try {
-                                            zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                        } catch (IOException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }else{
-                                    try {
-                                        zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                    } catch (IOException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                            else{
-                                try {
-                                    zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-                                } catch (IOException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                } catch (JSONException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                }
-                            }
+    //                     if(currentlog.get_device_status() == null){
+    //                         currentlog.set_device_status(device.getstatus());
+    //                         httplogreqRepo.save(currentlog);
+    //                         //System.out.println(hostid);
+    //                         if(hostid != null){
+    //                             JSONArray items = null;
+    //                             try {
+    //                                 items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    //                             } catch (IOException e1) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e1.printStackTrace();
+    //                             } catch (JSONException e1) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e1.printStackTrace();
+    //                             }
+    //                             StringBuilder ItemsInHost = new StringBuilder();
+    //                             if(items != null){
+    //                                 for(int i=0;i<items.length();i++){
+    //                                     JSONObject current_item = null;
+    //                                     try {
+    //                                         current_item = items.getJSONObject(i);
+    //                                     } catch (JSONException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     }
+    //                                     String itemkey = "null";
+    //                                     try {
+    //                                         itemkey = current_item.get("key_").toString();
+    //                                     } catch (JSONException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     }
+    //                                     ItemsInHost.append( itemkey + ";");
+    //                                 }
+    //                                 if(ItemsInHost.toString().contains("device.status")){
+    //                                     try {
+    //                                         zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    //                                     } catch (IOException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     }
+    //                                 }else{
+    //                                     try {
+    //                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                                     } catch (IOException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     } catch (JSONException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     }
+    //                                 }
+    //                             }else{
+    //                                 try {
+    //                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                                 } catch (IOException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 } catch (JSONException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                             }
+    //                         }
+    //                         else{
+    //                             try {
+    //                                 zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
+    //                             } catch (IOException e) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e.printStackTrace();
+    //                             } catch (JSONException e) {
+    //                                 // TODO Auto-generated catch block
+    //                                 e.printStackTrace();
+    //                             }
+    //                         }
     
-                        }else{
-                            if(currentlog.get_device_status().matches(device.getstatus()) == false){
-                                currentlog.set_device_status(device.getstatus());
-                                httplogreqRepo.save(currentlog);
-                                if(hostid != null){
-                                    JSONArray items = null;
-                                    try {
-                                        items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-                                    } catch (IOException e1) {
-                                        // TODO Auto-generated catch block
-                                        e1.printStackTrace();
-                                    } catch (JSONException e1) {
-                                        // TODO Auto-generated catch block
-                                        e1.printStackTrace();
-                                    }
-                                    StringBuilder ItemsInHost = new StringBuilder();
-                                    if(items != null){
-                                        for(int i=0;i<items.length();i++){
-                                            JSONObject current_item = null;
-                                            try {
-                                                current_item = items.getJSONObject(i);
-                                            } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
-                                                e.printStackTrace();
-                                            }
-                                            String itemkey = "null";
-                                            try {
-                                                itemkey = current_item.get("key_").toString();
-                                            } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
-                                                e.printStackTrace();
-                                            }
-                                            ItemsInHost.append( itemkey + ";");
-                                        }
-                                        if(ItemsInHost.toString().contains("device.status")){
-                                            try {
-                                                zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-                                            } catch (IOException e) {
-                                                // TODO Auto-generated catch block
-                                                e.printStackTrace();
-                                            }
-                                        }else{
-                                            try {
-                                                zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                            } catch (IOException e) {
-                                                // TODO Auto-generated catch block
-                                                e.printStackTrace();
-                                            } catch (JSONException e) {
-                                                // TODO Auto-generated catch block
-                                                e.printStackTrace();
-                                            }
-                                        }
-                                    }else{
-                                        try {
-                                            zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-                                        } catch (IOException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        } catch (JSONException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }
-                                else{
-                                    try {
-                                        zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-                                    } catch (IOException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    } catch (JSONException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                        }
-                        currentlog.set_device_status(device.getstatus());
-                        httplogreqRepo.save(currentlog);
-                    }
-                }   
-            }
-        }).start();
+    //                     }else{
+    //                         if(currentlog.get_device_status().matches(device.getstatus()) == false){
+    //                             currentlog.set_device_status(device.getstatus());
+    //                             httplogreqRepo.save(currentlog);
+    //                             if(hostid != null){
+    //                                 JSONArray items = null;
+    //                                 try {
+    //                                     items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    //                                 } catch (IOException e1) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e1.printStackTrace();
+    //                                 } catch (JSONException e1) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e1.printStackTrace();
+    //                                 }
+    //                                 StringBuilder ItemsInHost = new StringBuilder();
+    //                                 if(items != null){
+    //                                     for(int i=0;i<items.length();i++){
+    //                                         JSONObject current_item = null;
+    //                                         try {
+    //                                             current_item = items.getJSONObject(i);
+    //                                         } catch (JSONException e) {
+    //                                             // TODO Auto-generated catch block
+    //                                             e.printStackTrace();
+    //                                         }
+    //                                         String itemkey = "null";
+    //                                         try {
+    //                                             itemkey = current_item.get("key_").toString();
+    //                                         } catch (JSONException e) {
+    //                                             // TODO Auto-generated catch block
+    //                                             e.printStackTrace();
+    //                                         }
+    //                                         ItemsInHost.append( itemkey + ";");
+    //                                     }
+    //                                     if(ItemsInHost.toString().contains("device.status")){
+    //                                         try {
+    //                                             zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    //                                         } catch (IOException e) {
+    //                                             // TODO Auto-generated catch block
+    //                                             e.printStackTrace();
+    //                                         }
+    //                                     }else{
+    //                                         try {
+    //                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                                         } catch (IOException e) {
+    //                                             // TODO Auto-generated catch block
+    //                                             e.printStackTrace();
+    //                                         } catch (JSONException e) {
+    //                                             // TODO Auto-generated catch block
+    //                                             e.printStackTrace();
+    //                                         }
+    //                                     }
+    //                                 }else{
+    //                                     try {
+    //                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
+    //                                     } catch (IOException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     } catch (JSONException e) {
+    //                                         // TODO Auto-generated catch block
+    //                                         e.printStackTrace();
+    //                                     }
+    //                                 }
+    //                             }
+    //                             else{
+    //                                 try {
+    //                                     zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
+    //                                 } catch (IOException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 } catch (JSONException e) {
+    //                                     // TODO Auto-generated catch block
+    //                                     e.printStackTrace();
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                     currentlog.set_device_status(device.getstatus());
+    //                     httplogreqRepo.save(currentlog);
+    //                 }
+    //             }   
+    //         }
+    //     }).start();
 
         
         
 
-        //zabbixRPC.UpdateItem("ACS_ZabbixAPI_Test", "create_item_test", "Testingsszzas");
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"output\": [\"hostid\",\"host\",\"tags\",\"macros\"],\"selectInterfaces\": [\"interfaceid\",\"ip\"]},\"id\": 2,\"auth\": \""+auth+"\"}";
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [[\"itemid\", \"name\", \"key_\"]]},\"id\": 1,\"auth\": \""+auth+"\"}";
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.update\",\"params\": {\"itemid\": \"567105\",\"lastvalue\": test},\"auth\": \""+auth+"\",\"id\": 5}";
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [\"itemid\", \"name\", \"key_\",\"lastvalue\",\"interface\"],\"selectPreprocessing\": \"extend\",\"hostids\": \"27053\"},\"auth\": \""+auth+"\",\"id\": 1}";
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27044\",\"search\": {\"key_\": \"devicesstatus\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    //     //zabbixRPC.UpdateItem("ACS_ZabbixAPI_Test", "create_item_test", "Testingsszzas");
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"output\": [\"hostid\",\"host\",\"tags\",\"macros\"],\"selectInterfaces\": [\"interfaceid\",\"ip\"]},\"id\": 2,\"auth\": \""+auth+"\"}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [[\"itemid\", \"name\", \"key_\"]]},\"id\": 1,\"auth\": \""+auth+"\"}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.update\",\"params\": {\"itemid\": \"567105\",\"lastvalue\": test},\"auth\": \""+auth+"\",\"id\": 5}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [\"itemid\", \"name\", \"key_\",\"lastvalue\",\"interface\"],\"selectPreprocessing\": \"extend\",\"hostids\": \"27053\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27044\",\"search\": {\"key_\": \"devicesstatus\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
  
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\"},\"search\": {\"key_\": \"test\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\"},\"search\": {\"key_\": \"test\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
         
-        //Get items
-        //String message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\",\"search\": {\"key_\": \"\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    //     //Get items
+    //     //String message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\",\"search\": {\"key_\": \"\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
 
-        //zabbixRPC.Testing(message, auth, zabbix_url);
-        //message = "{\"jsonrpc\": \"2.0\",\"request\":\"sender data\",\"data\":[{\"host\":\"ACS_ZabbixAPI_Test\",\"key\":\"trapper\",\"value\":\"test value\"}],\"auth\": \""+auth+"\",\"id\": 1}";
-        //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"filter\":{\"host\":\"ACS_ZabbixAPI_Test\"}},\"id\": 2,\"auth\": \""+auth+"\"}";
+    //     //zabbixRPC.Testing(message, auth, zabbix_url);
+    //     //message = "{\"jsonrpc\": \"2.0\",\"request\":\"sender data\",\"data\":[{\"host\":\"ACS_ZabbixAPI_Test\",\"key\":\"trapper\",\"value\":\"test value\"}],\"auth\": \""+auth+"\",\"id\": 1}";
+    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"filter\":{\"host\":\"ACS_ZabbixAPI_Test\"}},\"id\": 2,\"auth\": \""+auth+"\"}";
         
-        //GetZabbixHost(message, zabbix_url);
+    //     //GetZabbixHost(message, zabbix_url);
 
-        //UpdateItem();
-    }
+    //     //UpdateItem();
+    // }
 
 
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
-        if (!appReady) {
-            System.out.println("Skipping scheduled run of DeviceStatusUpdate, app not ready");
-            return;  // Skip running before initialization
-        }
-
-        if (httplogreqRepo == null || device_front == null ) {
-            System.err.println("ERROR httplogreq/device repository not initialized yet");
+        if (!appReady || httplogreqRepo == null || device_front == null) {
+            System.out.println("Skipping DeviceStatusUpdate: app not ready or repos not initialized.");
             return;
+        } else {
+            System.out.println("DeviceStatusUpdate: app is ready, proceeding with device status update.");
         }
-        /*
-        List<group_command> CommandsInGroup = GroupCommandRepo.findByParent("/apollo");
-        for(int i=0; i<CommandsInGroup.size();i++){
-            group_command current_command = CommandsInGroup.get(i);
-            //System.out.println(current_command.get_command().split("\n",-1)[0]);
-        }
-        */
         
         Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll();
         for (httprequestlog httprequestlog : listOfDevices) {
@@ -1205,8 +1195,8 @@ public class testController {
                     break;
                 }
             } 
-            
-            if(curent_device.getstatus() != null && !"syncing".equalsIgnoreCase(curent_device.getstatus())){
+            if (curent_device == null) return;
+            if(curent_device.getstatus().contains("syncing")==false){
                 if(interval>3){
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
                     LocalDateTime now = LocalDateTime.now();
@@ -1216,25 +1206,13 @@ public class testController {
                     if(curent_device.getparent().matches("unassigned")){
                         device_front.delete(curent_device);
                     }
+                    System.out.println("Saved to database: " + curent_device.getId());
                 }
                 else{
                     UpdateDeviceStatus(httprequestlog.get_SN(), "online");
+                    System.out.println("Saved to database: " + curent_device.getId());
                 }
             }
-            
-            /*else{
-                while(true){
-                    List<taskhandler> remainingTask = taskhandlerRepo.findBySerialNumEquals(httprequestlog.get_SN());
-                    Integer NumRemainingTask = remainingTask.size();
-                    if(NumRemainingTask<1){
-                        device device_to_bootstrap = device_front.getBySerialNum(httprequestlog.get_SN());
-                        device_to_bootstrap.setstatus("synced");
-                        device_front.save(device_to_bootstrap);
-                        break;
-                    }
-                }
-            }
-            */
         }
     }
 
