@@ -522,6 +522,7 @@ public class testController {
                 if (NumRemainingTask < 1) {
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                     device_to_bootstrap.setstatus("synced");
+                    device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
                     
                     // add info to radius
@@ -531,9 +532,26 @@ public class testController {
                     String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
                     String calledStationId = cleanedMac + ":" + ssid;
                     System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
-                    AddApInfoToRadius(calledStationId);
+                    String radiusResponse = AddApInfoToRadius(calledStationId);
+                    System.out.println("Radius Response: " + radiusResponse);
 
                     // add info to netbox
+                    String deviceparent = device_to_bootstrap.getparent();
+                    if (deviceparent != null && !deviceparent.equalsIgnoreCase("unassigned")) {
+                        int i = deviceparent.lastIndexOf('/');
+                        String parent = deviceparent.substring(0, i);
+                        String group = deviceparent.substring(i + 1);
+                        Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group);
+                        if (optionalGroup.isPresent()) {
+                            String location = optionalGroup.get().getlocation();
+                            String netboxResponse = AddApInfoToNetbox(location, group, serial_num, mac);
+                            System.out.println("Netbox Response: " + netboxResponse);
+                        } else {
+                            System.out.println("ERROR: cannot derive device location from parent " + parent + " and group " + group);
+                        }
+                    } else {
+                        System.out.println("ERROR: device is either null or unassigned");
+                    }
                     
                     break;
                 }
@@ -710,11 +728,10 @@ public class testController {
         return DeviceSN;
     }
 
-	@GetMapping("/findNetboxSiteName") 
-    public String FindSiteByName(@RequestParam String sitename) throws IOException, InterruptedException { // checks if site name exists, returns site id or error message
-        String netboxApiUrl = env.getProperty("netbox.api.url");
+    private String FindSiteByName(String sitename) { // checks if site name exists, returns site id or error message
+        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
         String netboxAuthToken = env.getProperty("netbox.auth.token");
-        String url = netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
+        System.out.println("URL: " + netboxApiUrl);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Token " + netboxAuthToken);
@@ -724,7 +741,7 @@ public class testController {
         RestTemplate restTemplate = new RestTemplate();
 
         ResponseEntity<String> response = restTemplate.exchange(
-                url,
+                netboxApiUrl,
                 HttpMethod.GET,
                 entity,
                 String.class
@@ -748,69 +765,67 @@ public class testController {
         }
     }
 
-    @GetMapping("/createNetboxSite")
-    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // creates site in acs zeep tenant, returns site id
-        String netboxApiUrl = env.getProperty("netbox.api.url");
-        String netboxAuthToken = env.getProperty("netbox.auth.token");
+    private String CreateSite(String sitename) { // creates site in acs zeep tenant, returns site id
+        try {
+            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/";
+            String netboxAuthToken = env.getProperty("netbox.auth.token");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + netboxAuthToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Token " + netboxAuthToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = new HashMap<>();
+            Map<String, Object> requestBody = new HashMap<>();
 
-        requestBody.put("name", sitename);
-        requestBody.put("slug", "acs-zeep");
-        requestBody.put("tenant", 16);
-        requestBody.put("status", "active");
-        requestBody.put("description", "Access Points located at CDO");
+            requestBody.put("name", sitename);
+            requestBody.put("slug", "acs-zeep");
+            requestBody.put("tenant", 16);
+            requestBody.put("status", "active");
+            requestBody.put("description", "Access Points located at CDO");
 
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
-        System.out.println("response body " + response.getBody());
-        
-        if (response.getStatusCodeValue() == 200) {
-            try {
-                JSONObject json = new JSONObject(response.getBody());
-                if (json.has("id")) {
-                    return String.valueOf(json.getInt("id")); // return id as string
+            System.out.println("response body " + response.getBody());
+            
+            if (response.getStatusCodeValue() == 200) {
+                try {
+                    JSONObject json = new JSONObject(response.getBody());
+                    if (json.has("id")) {
+                        return String.valueOf(json.getInt("id")); // return id as string
+                    }
+                } catch (JSONException e) {
+                    return "JSON ERROR";
                 }
-            } catch (JSONException e) {
-                return "JSON ERROR";
-            }
-        } 
-        return "ERROR CODE " + response.getStatusCodeValue();
+            } 
+            return "ERROR CODE " + response.getStatusCodeValue();
+        } catch (Exception e) {
+            return "ERROR " + e.getMessage(); // return error message
+        }
     }
 
-	@PostMapping("/adddevicetonetbox")
-    public String AddApInfoToNetbox(@RequestParam String site,
-        @RequestParam String device,
-        @RequestParam String sn,
-        @RequestParam String mac
-    ) throws IOException, InterruptedException {
+    private String AddApInfoToNetbox(String site, String device, String sn, String mac) {
         // GET SITE ID FIRST
         String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
         Integer siteId = null;
 
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if site exists, retrieve site id
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if query doesnt return 'error' or 'not found' then site exists, store site id
             siteId = Integer.valueOf(siteIdAsString); 
         } else { // if it doesnt exist, create new site
             siteIdAsString = CreateSite(site);
         }
 
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if site creation successful, retrieve site id
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if creation doesnt return 'error' or 'not found' then query successful, store site id
             siteId = Integer.valueOf(siteIdAsString); 
         } 
 
         // CREATE DEVICE 
-        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
         String netboxAuthToken = env.getProperty("netbox.auth.token");
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.set("Authorization", "Token " + netboxAuthToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -835,8 +850,7 @@ public class testController {
         return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
     }
 
-	@PostMapping("/adddevicetoradius")
-    public ResponseEntity<?> AddApInfoToRadius(@RequestParam String calledStationId) {
+    private String AddApInfoToRadius(String calledStationId) {
         try {
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
         System.out.println(optionalAddress.isPresent() ? "Mac address already exists" : "Mac address does not exist");
@@ -844,14 +858,15 @@ public class testController {
         if (!optionalAddress.isPresent()) {
             AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
             newAddress.setCalledStationId(calledStationId);
+            newAddress.setUpdatedAt(LocalDateTime.now());
             allowedNasMacAddressRepository.save(newAddress);
 
-            return ResponseEntity.ok("Mac address added successfully");
+            return "Mac address added successfully";
         } else {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Mac address already exists");
+            return "Mac address already exists";
         }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred. " + e.getMessage());
+            return "An error occurred. " + e.getMessage();
         }
     }
 
@@ -1203,10 +1218,11 @@ public class testController {
                     curent_device.setdate_offline(dtf.format(now));
                     device_front.save(curent_device);
                     UpdateDeviceStatus(httprequestlog.get_SN(), "offline");
+                    System.out.println("Saved to database: " + curent_device.getId());
                     if(curent_device.getparent().matches("unassigned")){
                         device_front.delete(curent_device);
+                        System.out.println("Removed from database: " + curent_device.getId());
                     }
-                    System.out.println("Saved to database: " + curent_device.getId());
                 }
                 else{
                     UpdateDeviceStatus(httprequestlog.get_SN(), "online");
@@ -1313,7 +1329,7 @@ public class testController {
             unassigned_device.setmodel(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
             unassigned_device.setstatus("online");
             unassigned_device.setparent("unassigned");
-            
+            unassigned_device.setdate_created(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
             //newDevice.set_date_modified(LocalTime.now().toString());
             //if(newDevice.getstatus().contains("syncing")==false){
             //    newDevice.setstatus("online");
@@ -1330,6 +1346,7 @@ public class testController {
             if(newDevice.getstatus().contains("syncing")==false){
                 newDevice.setstatus("online");
             }
+            newDevice.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
             newDevice.setactivated(true);
             device_front.save(newDevice);
         }
@@ -1959,7 +1976,7 @@ public class testController {
 	@PostMapping("/adddevice")
 	public device postGroup(@RequestBody device DEVICE) {
 
-        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), DEVICE.getdate_created(), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
+        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
 		return Device;
     }
 
@@ -2082,7 +2099,7 @@ public class testController {
         _device.setmac_address(Device.getmac_address());
         _device.setserial_number(Device.getserial_number());
         _device.setdate_created(Device.getdate_created());
-        _device.setdate_modified(Device.getdate_modified());
+        _device.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
         _device.setdevice_type(Device.getdevice_type());
         return new ResponseEntity<>(device_front.save(_device), HttpStatus.OK);
       } else {
