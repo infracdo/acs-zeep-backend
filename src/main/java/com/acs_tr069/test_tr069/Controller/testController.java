@@ -713,9 +713,9 @@ public class testController {
 
 	@GetMapping("/findNetboxSiteName") 
     public String FindSiteByName(@RequestParam String sitename) throws IOException, InterruptedException { // checks if site name exists, returns site id or error message
-        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
         String netboxAuthToken = env.getProperty("netbox.auth.token");
-        String url = netboxApiUrl + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
+        System.out.println("URL: " + netboxApiUrl);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Token " + netboxAuthToken);
@@ -725,7 +725,7 @@ public class testController {
         RestTemplate restTemplate = new RestTemplate();
 
         ResponseEntity<String> response = restTemplate.exchange(
-                url,
+                netboxApiUrl,
                 HttpMethod.GET,
                 entity,
                 String.class
@@ -749,41 +749,45 @@ public class testController {
         }
     }
 
-    @GetMapping("/createNetboxSite")
-    public String CreateSite(@RequestParam String sitename) throws IOException, InterruptedException { // creates site in acs zeep tenant, returns site id
-        String netboxApiUrl = env.getProperty("netbox.api.url");
-        String netboxAuthToken = env.getProperty("netbox.auth.token");
+    @PostMapping("/createNetboxSite")
+    public String CreateSite(@RequestParam String sitename) { // creates site in acs zeep tenant, returns site id
+        try {
+            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/";
+            String netboxAuthToken = env.getProperty("netbox.auth.token");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + netboxAuthToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Token " + netboxAuthToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = new HashMap<>();
+            Map<String, Object> requestBody = new HashMap<>();
 
-        requestBody.put("name", sitename);
-        requestBody.put("slug", "acs-zeep");
-        requestBody.put("tenant", 16);
-        requestBody.put("status", "active");
-        requestBody.put("description", "Access Points located at CDO");
+            requestBody.put("name", sitename);
+            requestBody.put("slug", "acs-zeep");
+            requestBody.put("tenant", 16);
+            requestBody.put("status", "active");
+            requestBody.put("description", "Access Points located at CDO");
 
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
-        System.out.println("response body " + response.getBody());
-        
-        if (response.getStatusCodeValue() == 200) {
-            try {
-                JSONObject json = new JSONObject(response.getBody());
-                if (json.has("id")) {
-                    return String.valueOf(json.getInt("id")); // return id as string
+            System.out.println("response body " + response.getBody());
+            
+            if (response.getStatusCodeValue() == 200) {
+                try {
+                    JSONObject json = new JSONObject(response.getBody());
+                    if (json.has("id")) {
+                        return String.valueOf(json.getInt("id")); // return id as string
+                    }
+                } catch (JSONException e) {
+                    return "JSON ERROR";
                 }
-            } catch (JSONException e) {
-                return "JSON ERROR";
-            }
-        } 
-        return "ERROR CODE " + response.getStatusCodeValue();
+            } 
+            return "ERROR CODE " + response.getStatusCodeValue();
+        } catch (Exception e) {
+            return "ERROR " + e.getMessage(); // return error message
+        }
     }
 
 	@PostMapping("/adddevicetonetbox")
@@ -796,22 +800,22 @@ public class testController {
         String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
         Integer siteId = null;
 
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if site exists, retrieve site id
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if query doesnt return 'error' or 'not found' then site exists, store site id
             siteId = Integer.valueOf(siteIdAsString); 
         } else { // if it doesnt exist, create new site
             siteIdAsString = CreateSite(site);
         }
 
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if site creation successful, retrieve site id
+        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if creation doesnt return 'error' or 'not found' then query successful, store site id
             siteId = Integer.valueOf(siteIdAsString); 
         } 
 
         // CREATE DEVICE 
-        String netboxApiUrl = env.getProperty("netbox.api.url");
+        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
         String netboxAuthToken = env.getProperty("netbox.auth.token");
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + netboxAuthToken);
+        headers.set("Authorization", "Token " + netboxAuthToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -845,6 +849,7 @@ public class testController {
         if (!optionalAddress.isPresent()) {
             AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
             newAddress.setCalledStationId(calledStationId);
+            newAddress.setUpdatedAt(LocalDateTime.now());
             allowedNasMacAddressRepository.save(newAddress);
 
             return ResponseEntity.ok("Mac address added successfully");
