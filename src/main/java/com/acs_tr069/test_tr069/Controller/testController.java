@@ -532,9 +532,26 @@ public class testController {
                     String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
                     String calledStationId = cleanedMac + ":" + ssid;
                     System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
-                    AddApInfoToRadius(calledStationId);
+                    String radiusResponse = AddApInfoToRadius(calledStationId);
+                    System.out.println("Radius Response: " + radiusResponse);
 
                     // add info to netbox
+                    String deviceparent = device_to_bootstrap.getparent();
+                    if (deviceparent != null && !deviceparent.equalsIgnoreCase("unassigned")) {
+                        int i = deviceparent.lastIndexOf('/');
+                        String parent = deviceparent.substring(0, i);
+                        String group = deviceparent.substring(i + 1);
+                        Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group);
+                        if (optionalGroup.isPresent()) {
+                            String location = optionalGroup.get().getlocation();
+                            String netboxResponse = AddApInfoToNetbox(location, group, serial_num, mac);
+                            System.out.println("Netbox Response: " + netboxResponse);
+                        } else {
+                            System.out.println("ERROR: cannot derive device location from parent " + parent + " and group " + group);
+                        }
+                    } else {
+                        System.out.println("ERROR: device is either null or unassigned");
+                    }
                     
                     break;
                 }
@@ -711,8 +728,7 @@ public class testController {
         return DeviceSN;
     }
 
-	@GetMapping("/findNetboxSiteName") 
-    public String FindSiteByName(@RequestParam String sitename) throws IOException, InterruptedException { // checks if site name exists, returns site id or error message
+    private String FindSiteByName(String sitename) { // checks if site name exists, returns site id or error message
         String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
         String netboxAuthToken = env.getProperty("netbox.auth.token");
         System.out.println("URL: " + netboxApiUrl);
@@ -749,8 +765,7 @@ public class testController {
         }
     }
 
-    @PostMapping("/createNetboxSite")
-    public String CreateSite(@RequestParam String sitename) { // creates site in acs zeep tenant, returns site id
+    private String CreateSite(String sitename) { // creates site in acs zeep tenant, returns site id
         try {
             String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/";
             String netboxAuthToken = env.getProperty("netbox.auth.token");
@@ -790,12 +805,7 @@ public class testController {
         }
     }
 
-	@PostMapping("/adddevicetonetbox")
-    public String AddApInfoToNetbox(@RequestParam String site,
-        @RequestParam String device,
-        @RequestParam String sn,
-        @RequestParam String mac
-    ) throws IOException, InterruptedException {
+    private String AddApInfoToNetbox(String site, String device, String sn, String mac) {
         // GET SITE ID FIRST
         String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
         Integer siteId = null;
@@ -840,8 +850,7 @@ public class testController {
         return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
     }
 
-	@PostMapping("/adddevicetoradius")
-    public ResponseEntity<?> AddApInfoToRadius(@RequestParam String calledStationId) {
+    private String AddApInfoToRadius(String calledStationId) {
         try {
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
         System.out.println(optionalAddress.isPresent() ? "Mac address already exists" : "Mac address does not exist");
@@ -852,12 +861,12 @@ public class testController {
             newAddress.setUpdatedAt(LocalDateTime.now());
             allowedNasMacAddressRepository.save(newAddress);
 
-            return ResponseEntity.ok("Mac address added successfully");
+            return "Mac address added successfully";
         } else {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Mac address already exists");
+            return "Mac address already exists";
         }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred. " + e.getMessage());
+            return "An error occurred. " + e.getMessage();
         }
     }
 
