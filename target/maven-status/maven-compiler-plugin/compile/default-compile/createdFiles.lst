@@ -1,4 +1,5 @@
 com\acs_tr069\test_tr069\CWMPResponses\RandomCodeGen.class
+com\acs_tr069\test_tr069\Security\SecurityConfiguration.class
 com\acs_tr069\test_tr069\Repo\webcli_response_logRepo.class
 com\acs_tr069\test_tr069\Entity\taskhandler.class
 com\acs_tr069\test_tr069\Config\acsDatabaseConfiguration.class
@@ -23,6 +24,7 @@ com\acs_tr069\test_tr069\Config\tr069AppConfig.class
 com\acs_tr069\test_tr069\Entity\groups.class
 com\acs_tr069\test_tr069\zeep\entity\AccTransactions.class
 com\acs_tr069\test_tr069\zeep\service\MonitoringService.class
+com\acs_tr069\test_tr069\Security\CustomJwtAuthenticationConverter.class
 com\acs_tr069\test_tr069\Entity\webcli_response_log.class
 com\acs_tr069\test_tr069\CWMPResponses\GetSoapFromString.class
 com\acs_tr069\test_tr069\Config\zeepDatabaseConfiguration.class
