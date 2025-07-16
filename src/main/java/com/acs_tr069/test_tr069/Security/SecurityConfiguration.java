@@ -1,9 +1,7 @@
 package com.acs_tr069.test_tr069.Security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -22,6 +20,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
             .cors() 
             .and()
             .authorizeRequests()
+                // .antMatchers("/api/radius/**").hasRole("ACS_RADIUS_API_ACCESS")
                 .antMatchers("/public/**").permitAll()
                 .anyRequest().authenticated()
             .and()

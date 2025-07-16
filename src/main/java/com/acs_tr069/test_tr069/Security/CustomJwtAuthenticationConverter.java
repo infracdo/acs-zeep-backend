@@ -33,7 +33,10 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Collecti
         if (realmAccess != null && realmAccess.containsKey("roles")) {
             List<String> roles = (List<String>) realmAccess.get("roles");
             authorities.addAll(roles.stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .map(role -> {
+                        String roleName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                        return new SimpleGrantedAuthority(roleName);
+                    })
                     .collect(Collectors.toSet()));
         }
 
@@ -44,7 +47,10 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Collecti
             if (clientRoles != null && clientRoles.containsKey("roles")) {
                 List<String> roles = (List<String>) clientRoles.get("roles");
                 authorities.addAll(roles.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .map(role -> {
+                        String roleName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                        return new SimpleGrantedAuthority(roleName);
+                    })
                         .collect(Collectors.toSet()));
             }
         }
@@ -53,10 +59,15 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Collecti
         List<String> groups = jwt.getClaimAsStringList(GROUPS);
         if (groups != null) {
             authorities.addAll(groups.stream()
-                    .map(group -> new SimpleGrantedAuthority("GROUP_" + group.replace("/", "")))
+                    .map(group -> {
+                        String groupName = group.replace("/", "");
+                        groupName = groupName.startsWith("GROUP_") ? groupName : "GROUP_" + groupName;
+                        return new SimpleGrantedAuthority(groupName);
+                    })
                     .collect(Collectors.toSet()));
         }
 
+        System.out.println("Authorities: " + authorities);
         return authorities;
     }
 }
