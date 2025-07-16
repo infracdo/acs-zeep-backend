@@ -25,6 +25,6 @@ public class AllowedNasMacAddress {
     private String calledStationId;
 
     @Column(name = "updated_at")
-    private String updatedAt;
+    private LocalDateTime updatedAt;
 
 }
