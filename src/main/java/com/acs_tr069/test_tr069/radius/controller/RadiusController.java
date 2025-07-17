@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,7 @@ public class RadiusController {
     }
 
     // Get number of currently connected access points
+    // @PreAuthorize("hasRole('ROLE_API_ACCESS')")
     @GetMapping("count-currently-connected-aps")
     public ResponseEntity<Map<String, Object>> getCountCurrentlyConnectedAPs() {
         long currentlyConnectedAPs = radiusService.getCountCurrentlyConnectedAPs();

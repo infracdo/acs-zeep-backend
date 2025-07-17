@@ -67,7 +67,6 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Collecti
                     .collect(Collectors.toSet()));
         }
 
-        System.out.println("Authorities: " + authorities);
         return authorities;
     }
 }
