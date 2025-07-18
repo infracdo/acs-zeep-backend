@@ -1,9 +1,7 @@
 package com.acs_tr069.test_tr069.Controller;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.SocketException;
-import java.net.URL;
 import java.net.UnknownHostException;
 import org.springframework.http.HttpHeaders;
 import java.sql.Timestamp;
@@ -42,7 +40,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -728,44 +725,48 @@ public class testController {
         return DeviceSN;
     }
 
-    private String FindSiteByName(String sitename) { // checks if site name exists, returns site id or error message
-        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + sitename + "&tenant_id=16";
-        String netboxAuthToken = env.getProperty("netbox.auth.token");
-        System.out.println("URL: " + netboxApiUrl);
+    private String FindSiteByName(String site) { // checks if site name exists, returns site id or error message
+        try {
+            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + site + "&tenant_id=16";
+            String netboxAuthToken = env.getProperty("netbox.auth.token");
+            System.out.println("URL: " + netboxApiUrl);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Token " + netboxAuthToken);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Token " + netboxAuthToken);
 
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = new RestTemplate();
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                netboxApiUrl,
-                HttpMethod.GET,
-                entity,
-                String.class
-            );
+            ResponseEntity<String> response = restTemplate.exchange(
+                    netboxApiUrl,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+                );
 
-        if (response.getStatusCodeValue() == 200) {
-            try {
-                JSONObject jsonobject = new JSONObject(response.getBody());
-                JSONArray results = jsonobject.getJSONArray("results");
-                if (results.length() > 0) {
-                    int id = results.getJSONObject(0).getInt("id");
-                    return String.valueOf(id);  
-                } else {
-                    return "NOT FOUND"; 
+            if (response.getStatusCodeValue() == 200) {
+                try {
+                    JSONObject jsonobject = new JSONObject(response.getBody());
+                    JSONArray results = jsonobject.getJSONArray("results");
+                    if (results.length() > 0) {
+                        int id = results.getJSONObject(0).getInt("id");
+                        return String.valueOf(id);  
+                    } else {
+                        return "NOT FOUND"; 
+                    }
+                } catch (JSONException e) {
+                    return "JSON ERROR";
                 }
-            } catch (JSONException e) {
-                return "JSON ERROR";
+            } else {
+                return "ERROR CODE " + response.getStatusCodeValue();
             }
-        } else {
-            return "ERROR CODE " + response.getStatusCodeValue();
+        } catch (Exception e) {
+            return "ERROR " + e.getMessage();
         }
     }
 
-    private String CreateSite(String sitename) { // creates site in acs zeep tenant, returns site id
+    private String CreateSite(String site) { // creates site in acs zeep tenant, returns site id
         try {
             String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/";
             String netboxAuthToken = env.getProperty("netbox.auth.token");
@@ -776,7 +777,7 @@ public class testController {
 
             Map<String, Object> requestBody = new HashMap<>();
 
-            requestBody.put("name", sitename);
+            requestBody.put("name", site);
             requestBody.put("slug", "acs-zeep");
             requestBody.put("tenant", 16);
             requestBody.put("status", "active");
@@ -801,53 +802,57 @@ public class testController {
             } 
             return "ERROR CODE " + response.getStatusCodeValue();
         } catch (Exception e) {
-            return "ERROR " + e.getMessage(); // return error message
+            return "ERROR " + e.getMessage(); 
         }
     }
 
     private String AddApInfoToNetbox(String site, String device, String sn, String mac) {
         // GET SITE ID FIRST
-        String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
-        Integer siteId = null;
+        try {
+            String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
+            Integer siteId = null;
 
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if query doesnt return 'error' or 'not found' then site exists, store site id
-            siteId = Integer.valueOf(siteIdAsString); 
-        } else { // if it doesnt exist, create new site
-            siteIdAsString = CreateSite(site);
+            if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if query doesnt return 'error' or 'not found' then site exists, store site id
+                siteId = Integer.valueOf(siteIdAsString); 
+            } else { // if it doesnt exist, create new site
+                siteIdAsString = CreateSite(site);
+            }
+
+            if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if creation doesnt return 'error' or 'not found' then query successful, store site id
+                siteId = Integer.valueOf(siteIdAsString); 
+            } 
+
+            // CREATE DEVICE 
+            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
+            String netboxAuthToken = env.getProperty("netbox.auth.token");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Token " + netboxAuthToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("name", device);
+            requestBody.put("device_role", 3);
+            requestBody.put("device_type", 105);
+            requestBody.put("serial_number", sn);
+            requestBody.put("site", siteId);
+            requestBody.put("tenant", 16);
+            requestBody.put("status", "active");
+
+            Map<String, Object> customFields = new HashMap<>();
+            customFields.put("mac_address", mac);
+            requestBody.put("custom_fields", customFields);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+
+            System.out.println("response body " + response.getBody());
+            return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
+        } catch (Exception e) {
+            return "ERROR " + e.getMessage();
         }
-
-        if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if creation doesnt return 'error' or 'not found' then query successful, store site id
-            siteId = Integer.valueOf(siteIdAsString); 
-        } 
-
-        // CREATE DEVICE 
-        String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
-        String netboxAuthToken = env.getProperty("netbox.auth.token");
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Token " + netboxAuthToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("name", device);
-        requestBody.put("device_role", 3);
-        requestBody.put("device_type", 105);
-        requestBody.put("serial_number", sn);
-        requestBody.put("site", siteId);
-        requestBody.put("tenant", 16);
-        requestBody.put("status", "active");
-
-        Map<String, Object> customFields = new HashMap<>();
-        customFields.put("mac_address", mac);
-        requestBody.put("custom_fields", customFields);
-
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
-
-        System.out.println("response body " + response.getBody());
-        return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
     }
 
     private String AddApInfoToRadius(String calledStationId) {
