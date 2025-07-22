@@ -1763,7 +1763,7 @@ public class testController {
         }
     }
 
-    @RequestMapping(value="/WebCli/ {SerialNum}")
+    @RequestMapping(value="/WebCli/{SerialNum}")
     public DeferredResult<ResponseEntity<String>> WebCli(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request ) 
             throws JSONException 
     {  
