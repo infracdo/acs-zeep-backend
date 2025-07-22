@@ -1764,16 +1764,17 @@ public class testController {
     }
 
     @RequestMapping(value="/WebCli/ {SerialNum}")
-    public DeferredResult<ResponseEntity<String>> WebCli(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )
+    public DeferredResult<ResponseEntity<String>> WebCli(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request ) 
             throws JSONException 
     {  
         String[] modez = Modes.split(",",-1);
+        System.out.println("Modez: "+ Modes);
         String ObjectName = modez[7];
         System.out.println("COmmand:############"+ Modes);
         System.out.println("COmmand:############"+ ObjectName);
         //System.out.println("Modez: "+ Modes);
         AddWebCLiTask(Modes, SerialNum, ObjectName);
-        DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
+        DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(300000L);
         new Thread(() -> {
             String body = "";
             while(true){
