@@ -29,7 +29,7 @@ public class httprequestlog {
         return lastRequest;
     }
     public String get_device_status(){
-        return cookie;
+        return device_status;
     }
 
     public void set_SN(String sn){
