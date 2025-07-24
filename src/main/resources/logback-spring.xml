@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <!-- Change path to where logs should be stored -->
-  <property name="LOG_DIR" value="C:/springboot-logs" />
+  <property name="LOG_DIR" value="/var/log/" />
   <property name="APP_NAME" value="acs-zeep" />
 
   <!-- Console appender for plain logs -->
