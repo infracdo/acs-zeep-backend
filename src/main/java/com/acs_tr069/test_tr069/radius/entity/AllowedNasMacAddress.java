@@ -1,7 +1,6 @@
 package com.acs_tr069.test_tr069.radius.entity;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

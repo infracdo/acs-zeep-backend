@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.soap.SOAPBody;
@@ -136,7 +138,6 @@ public class testController {
     }
     */
     
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
@@ -151,7 +152,6 @@ public class testController {
                 try {
                     convertB = getSoap.StringToSAOP(xmlPayload).getSOAPBody();
                 } catch (SOAPException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
                 DeviceSerialNum = convertB.getElementsByTagName("SerialNumber").item(0).getTextContent();
@@ -178,7 +178,6 @@ public class testController {
                     converteBody = getSoap.StringToSAOP(xmlPayload).getSOAPBody();
                     getResponsetype = converteBody.getChildNodes().item(0).getLocalName();
                 } catch (SOAPException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
                 System.out.println("ResponseType: "+ getResponsetype);
@@ -199,7 +198,6 @@ public class testController {
                         try {
                             UpdateDevicesTable(xmlPayload);
                         } catch (JSONException e) {
-                            // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
                         result.setResult(ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.TEXT_XML)
@@ -294,7 +292,6 @@ public class testController {
                 try {
                     SendUDPRequest(DeviceSN);
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                     System.out.println(e);
                 }
@@ -321,7 +318,6 @@ public class testController {
         }, "logging " + serial_num).start();
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void CheckDeviceEventCode(String Payload) {
         //System.out.println(LocalTime.now() + "Current Thread: " + Thread.currentThread().getName());
         new Thread(() -> {
@@ -331,14 +327,12 @@ public class testController {
             try {
                 UpdateDeviceDetail(Payload);
             } catch (JSONException e1) {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
 
             try {
                 soapBody = getSoap.StringToSAOP(Payload).getSOAPBody();
             } catch (SOAPException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
             NumEvent = soapBody.getElementsByTagName("Event").item(0).getChildNodes().getLength();
@@ -379,7 +373,6 @@ public class testController {
                         try {
                             UpdateDevicesTable(Payload);
                         } catch (JSONException e) {
-                            // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
                         String ObjectName = "{,Command:macc nat-config vlan 233 network 10.233.2.0 255.255.255.0,Command:interface BVI 233,Command:ip address 10.233.2.1 255.255.255.0,Command:ip nat inside,Command:end,Command:write,}";
@@ -401,7 +394,6 @@ public class testController {
                     try {
                         UpdateDevicesTable(Payload);
                     } catch (JSONException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                     /*
@@ -414,7 +406,6 @@ public class testController {
         }, "CheckEvent").start();
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void Bootstraping(String serial_num) {
         new Thread(() -> {
             // search and destroy accesspoint objects
@@ -580,7 +571,6 @@ public class testController {
         try {
             cpe_response = cpe_response_repo.getBySerialNumEquals(serial_num);
         } catch (Exception e) {
-            //TODO: handle exception
             cpe_response = null;
         }
         //System.out.println(cpe_response);
@@ -592,7 +582,6 @@ public class testController {
                 try {
                     soapBody = getSoap.StringToSAOP(cpe_response.get_payload()).getSOAPBody();
                 } catch (SOAPException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
                 Integer numOfParam = soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
@@ -683,7 +672,6 @@ public class testController {
         }
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void ApplyOldCommand(String serial_num, String device_group) {
         List<group_command> CommandsInGroup = GroupCommandRepo.findByParent(device_group);
         devices currentDevice = devicesRepo.gEntityBySerialnum(serial_num);
@@ -1251,14 +1239,13 @@ public class testController {
         }
     }
     
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     private void UpdateDeviceDetail(String Payload) throws JSONException{
         SOAPBody InformData = null;
         Integer NumData = 0;
         try {
             InformData = getSoap.StringToSAOP(Payload).getSOAPBody();
         } catch (Exception e) {
-            //TODO: handle exception
+            e.printStackTrace();
         }
         NumData = InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
         StringBuilder sb = new StringBuilder();
@@ -1293,7 +1280,6 @@ public class testController {
         }
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void UpdateDevicesTable(String Payload) throws JSONException {
         //DevicesGet
         /*
@@ -1309,7 +1295,7 @@ public class testController {
         try {
             InformData = getSoap.StringToSAOP(Payload).getSOAPBody();
         } catch (Exception e) {
-            //TODO: handle exception
+            e.printStackTrace();
         }
         NumData = InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
         StringBuilder sb = new StringBuilder();
@@ -1382,14 +1368,12 @@ public class testController {
     //############################################################################
 
     //@RequestMapping(value="/TestSendConnectionRequest/{SN}")
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void SendUDPRequest(@PathVariable String SN) throws IOException{
         
         new Thread(()->{
             try {
                 Thread.sleep(1 * 1000);
             } catch (InterruptedException e2) {
-                // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
 
@@ -1423,16 +1407,13 @@ public class testController {
                 try {
                     udpclient = new udp_sender();
                 } catch (SocketException e1) {
-                    // TODO Auto-generated catch block
                     e1.printStackTrace();
                 } catch (UnknownHostException e1) {
-                    // TODO Auto-generated catch block
                     e1.printStackTrace();
                 }
                 try {
                     udpclient.sendConnectionRequest(host, portnum, msg);
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                     System.out.println(e);
                 }
@@ -1449,7 +1430,6 @@ public class testController {
     //SaveTask
     //############################################################################
     
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
     public void SaveTask(String SN, String Method,String Parameters,String Optional){ 
         taskhandler newTasK = new taskhandler();
         newTasK.set_SN(SN);
@@ -1764,33 +1744,78 @@ public class testController {
     }
 
     @RequestMapping(value="/WebCli/{SerialNum}")
-    public DeferredResult<ResponseEntity<String>> WebCli(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request ) 
-            throws JSONException 
-    {  
-        String[] modez = Modes.split(",",-1);
-        System.out.println("Modez: "+ Modes);
-        String ObjectName = modez[7];
-        System.out.println("COmmand:############"+ Modes);
-        System.out.println("COmmand:############"+ ObjectName);
-        //System.out.println("Modez: "+ Modes);
-        AddWebCLiTask(Modes, SerialNum, ObjectName);
-        DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(300000L);
-        new Thread(() -> {
-            String body = "";
-            while(true){
-                body = GetCLIOutput(SerialNum, ObjectName);
-                if(body!=null){
-                    break;
-                }
+    public DeferredResult<ResponseEntity<String>> WebCli(
+        @RequestBody String Modes,
+        @PathVariable String SerialNum,
+        HttpServletRequest request) throws JSONException {
 
-            }
-            //System.out.println("test--------" + body);
-            result.setResult( ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
-        }, "MyThread for " ).start();
-        return result;
+    String[] modez = Modes.split(",", -1);
+    if (modez.length <= 7) {
+        DeferredResult<ResponseEntity<String>> errorResult = new DeferredResult<>();
+        errorResult.setResult(ResponseEntity.badRequest().body("Invalid Modes format"));
+        return errorResult;
     }
 
-    // TODO; CREATE SEPARATE METHOD FOR ZEEP
+    String ObjectName = modez[7];
+    System.out.println("Command: " + Modes);
+    System.out.println("ObjectName: " + ObjectName);
+
+    AddWebCLiTask(Modes, SerialNum, ObjectName);
+
+    DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(120000L);
+    AtomicReference<Thread> pollingThreadRef = new AtomicReference<>();
+
+    // Handle timeout
+    result.onTimeout(() -> {
+        System.out.println("Request timed out for Serial: " + SerialNum);
+        Thread t = pollingThreadRef.get();
+        if (t != null) t.interrupt();
+        result.setErrorResult(ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body("Request timed out"));
+    });
+
+    // Handle error
+    result.onError((Throwable t) -> {
+        System.err.println("Error occurred: " + t.getMessage());
+        Thread pollingThread = pollingThreadRef.get();
+        if (pollingThread != null) pollingThread.interrupt();
+        result.setErrorResult(ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Internal server error"));
+    });
+
+    Thread pollingThread = new Thread(() -> {
+        try {
+            String body;
+            while (true) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
+
+                body = GetCLIOutput(SerialNum, ObjectName);
+                if (body != null) {
+                    result.setResult(ResponseEntity.ok()
+                            .contentType(MediaType.TEXT_PLAIN)
+                            .body(body));
+                    return;
+                }
+
+                Thread.sleep(100); // avoid tight loop
+            }
+        } catch (InterruptedException e) {
+            System.out.println("current thread was stopped for serial: " + SerialNum);
+            Thread.currentThread().interrupt();
+        }
+    }, "WebCli-" + SerialNum);
+
+    pollingThreadRef.set(pollingThread);
+    pollingThread.start();
+
+    return result;
+}
+
+
     @RequestMapping(value="/CliAutoComplete/ {SerialNum}")
     public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )
             throws JSONException 
@@ -1822,7 +1847,6 @@ public class testController {
                     try {
                         AddWebCLiTask(Modes, SerialNum, ObjectName);
                     } catch (JSONException e1) {
-                        // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
     
@@ -1841,7 +1865,6 @@ public class testController {
                         auto_completeRepo.save(NewSuggestion);
                     } catch (Exception e) {
                         System.out.println(e);
-                        //TODO: handle exception
                     }
                     
                     
@@ -1854,7 +1877,6 @@ public class testController {
                     try {
                         AddWebCLiTask(Modes, SerialNum, ObjectName);
                     } catch (JSONException e1) {
-                        // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
                     while(true){
@@ -1872,7 +1894,6 @@ public class testController {
                         auto_completeRepo.save(NewSuggestion);
                     } catch (Exception e) {
                         System.out.println(e);
-                        //TODO: handle exception
                     }
                     
                     
@@ -1890,10 +1911,12 @@ public class testController {
 
     private String GetCLIOutput(String SerialNum, String ObjectName)
     {
+        System.out.println("attempting to retrieve cli output");
         //String Byte2String = new String(webcli_byte, Charsets.UTF_8);
         String Outputbody = null;
         String CommandUsed = null;
         List<webcli_response_log> cliOutput = webCliRepo.findBySerialNumEquals(SerialNum);
+        System.out.println("cliOutput: "+cliOutput);
         if(cliOutput!=null){
             Integer NumOutput = cliOutput.size();
             for(int i=0; i<NumOutput; i++){
@@ -1912,6 +1935,7 @@ public class testController {
 
     private void AddWebCLiTask(String Modes,String SerialNum,String ObjectName)throws JSONException
     {
+        System.out.println("attempting to add webcli task");
         if(webCliRepo.findBySerialNumEquals(SerialNum).isEmpty()){
             String Head = "web_cli \"exec\" \"0\" \"0\" \"0\" \"\" \"\" ";
             SaveTask(SerialNum, "WebCli", "{,\"Command\":"+Head+'"'+ObjectName+'"'+",}", "shell");
