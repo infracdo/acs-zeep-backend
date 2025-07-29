@@ -861,39 +861,42 @@ public class testController {
     }
 
     @PostMapping("/addtoradius")
-    private String AddApInfoToRadius(@RequestParam Long id) {
+    public String AddApInfoToRadius(@RequestParam Long id) {
         device deviceData = null; // device details
-        String ssid = null;
+        // String ssid = null;
         try {
             // GET DEVICE INFO BY ID
             Optional<device> optionalDevice = device_front.findById(id); // check if device exists
             if (optionalDevice.isPresent()) {
                 deviceData = optionalDevice.get(); // retrieve device details
-                Optional<group_command> optionalCommand = GroupCommandRepo.findZeepTemplateByParent(deviceData.getparent());
-                if (optionalCommand.isPresent()) {
-                    group_command commandData = optionalCommand.get();
-                    String template = commandData.getcommand();
-                    Pattern pattern = Pattern.compile("dot11 wlan 2\\s*\\r?\\n\\s*ssid\\s+(.+)", Pattern.CASE_INSENSITIVE);
-                    Matcher matcher = pattern.matcher(template);
-                    if (matcher.find()) {
-                        ssid = matcher.group(1).trim(); // returns "MyNetworkName"
-                    } else {
-                        return "ERROR ssid not found";
-                    }
-                } else {
-                    return "ERROR command not found";
-                }
+                // Optional<group_command> optionalCommand = GroupCommandRepo.findZeepTemplateByParent(deviceData.getparent());
+                // if (optionalCommand.isPresent()) {
+                //     group_command commandData = optionalCommand.get();
+                //     String template = commandData.getcommand();
+                //     Pattern pattern = Pattern.compile("dot11 wlan 2\\s*\\r?\\n\\s*ssid\\s+(.+)", Pattern.CASE_INSENSITIVE);
+                //     Matcher matcher = pattern.matcher(template);
+                //     if (matcher.find()) {
+                //         ssid = matcher.group(1).trim(); // returns "MyNetworkName"
+                //     } else {
+                //         return "ERROR ssid not found";
+                //     }
+                // } else {
+                //     return "ERROR command not found";
+                // }
             } else {
                 return "ERROR device not found";
             }
             
-            if (ssid == null) {
-                return "ERROR device ssid not found";
+            // if (ssid == null) {
+            //     return "ERROR device ssid not found";
+            // }
+
+            if (deviceData.getmac_address() == null  || deviceData.getmac_address().trim().isEmpty()) {
+                return "ERROR device mac not found";
             }
 
-            String cleanedMac = deviceData.getmac_address().replaceAll("[:\\-\\s]", "").toLowerCase();
-            String calledStationId = cleanedMac + ":" + ssid;
-            System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
+            String calledStationId = deviceData.getmac_address().replaceAll("[:\\-\\s]", "").toLowerCase();
+            System.out.println("calledStationId: " + calledStationId);
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
 
             if (!optionalAddress.isPresent()) {
