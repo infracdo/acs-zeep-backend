@@ -384,7 +384,7 @@ public class testController {
                         device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                         if(!device_to_bootstrap.getparent().matches("unassigned")){
                             //System.out.println("bootstraping : " + device_to_bootstrap.getserial_number());
-                            if (device_to_bootstrap.getstatus().contains("syncing") == false) {
+                            if (!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())) {
                                 device_to_bootstrap.setstatus("syncing");
                                 device_front.save(device_to_bootstrap);
                                 Bootstraping(serial_num);
@@ -722,9 +722,10 @@ public class testController {
                     JSONArray results = jsonobject.getJSONArray("results");
                     if (results.length() > 0) {
                         int id = results.getJSONObject(0).getInt("id");
+                        System.out.println("found site id for " + site + id);
                         return String.valueOf(id);  
                     } else {
-                        return "NOT FOUND"; 
+                        return "ERROR NOT FOUND"; 
                     }
                 } catch (JSONException e) {
                     return "JSON ERROR";
@@ -739,6 +740,7 @@ public class testController {
 
     private String CreateSite(String site) { // creates site in acs zeep tenant, returns site id
         try {
+            System.out.println("attempting to create site " + site);
             String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/";
             String netboxAuthToken = env.getProperty("netbox.auth.token");
 
@@ -749,17 +751,17 @@ public class testController {
             Map<String, Object> requestBody = new HashMap<>();
 
             requestBody.put("name", site);
-            requestBody.put("slug", "acs-zeep");
+            requestBody.put("slug", site);
             requestBody.put("tenant", 16);
             requestBody.put("status", "active");
-            requestBody.put("description", "Access Points located at CDO");
+            requestBody.put("description", "Access Points located at " + site);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
             RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
-            System.out.println("response body " + response.getBody());
+            System.out.println("create site response body " + response.getBody());
             
             if (response.getStatusCodeValue() == 200) {
                 try {
@@ -817,7 +819,8 @@ public class testController {
             String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
             Integer siteId = null;
 
-            if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) { // if query doesnt return 'error' or 'not found' then site exists, store site id
+            System.out.println("site " + site + " " + siteIdAsString);
+            if (siteIdAsString != null && !siteIdAsString.contains("ERROR")) { // if query doesnt return 'error' or 'not found' then site exists, store site id
                 siteId = Integer.valueOf(siteIdAsString); 
             } else { // if it doesnt exist, create new site
                 siteIdAsString = CreateSite(site);
@@ -1384,7 +1387,7 @@ public class testController {
             newDevice.setmac_address(object.get("Device.DeviceInfo.X_WWW-RUIJIE-COM-CN_MACAddress").toString());
             newDevice.setmodel(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
             //newDevice.set_date_modified(LocalTime.now().toString());
-            if(newDevice.getstatus().contains("syncing")==false){
+            if(!"syncing".equalsIgnoreCase(newDevice.getstatus())){
                 newDevice.setstatus("online");
             }
             newDevice.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
@@ -1743,7 +1746,7 @@ public class testController {
     @RequestMapping(value="/MoveDeviceGroup/{SerialNum}")
     public String MoveDeviceGroup(@PathVariable String SerialNum){
         device device_to_bootstrap = device_front.getBySerialNum(SerialNum);
-        if(device_to_bootstrap.getstatus().contains("syncing") == false){
+        if(!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())){
             device_to_bootstrap.setstatus("syncing");
             device_front.save(device_to_bootstrap);
             Bootstraping(SerialNum);
@@ -1812,7 +1815,7 @@ public class testController {
 
     AddWebCLiTask(Modes, SerialNum, ObjectName);
 
-    DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(120000L);
+    DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(300000L);
     AtomicReference<Thread> pollingThreadRef = new AtomicReference<>();
 
     // Handle timeout
@@ -1961,12 +1964,10 @@ public class testController {
 
     private String GetCLIOutput(String SerialNum, String ObjectName)
     {
-        System.out.println("attempting to retrieve cli output");
         //String Byte2String = new String(webcli_byte, Charsets.UTF_8);
         String Outputbody = null;
         String CommandUsed = null;
         List<webcli_response_log> cliOutput = webCliRepo.findBySerialNumEquals(SerialNum);
-        System.out.println("cliOutput: "+cliOutput);
         if(cliOutput!=null){
             Integer NumOutput = cliOutput.size();
             for(int i=0; i<NumOutput; i++){
@@ -1975,7 +1976,7 @@ public class testController {
                 if(CommandUsed.contains("\""+ObjectName+"\"")){
                     Outputbody = new String(currentCheck.get_CommandOutput(), Charsets.UTF_8);                       
                     webCliRepo.delete(webCliRepo.getByID(currentCheck.get_Id()));
-                    System.out.println("OutputBody: "+ new Timestamp(System.currentTimeMillis()));
+                    System.out.println("Cli OutputBody: "+ new Timestamp(System.currentTimeMillis()));
                     return Outputbody;
                 }
             }
