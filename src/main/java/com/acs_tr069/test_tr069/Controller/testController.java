@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -42,6 +44,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -514,32 +517,12 @@ public class testController {
                     device_front.save(device_to_bootstrap);
                     
                     // add info to radius
-                    String mac = device_to_bootstrap.getmac_address();
-                    String ssid = device_to_bootstrap.getdevice_name();
-
-                    String cleanedMac = mac.replaceAll("[:\\-\\s]", "").toLowerCase();
-                    String calledStationId = cleanedMac + ":" + ssid;
-                    System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
-                    String radiusResponse = AddApInfoToRadius(calledStationId);
+                    String radiusResponse = AddApInfoToRadius(device_to_bootstrap.getId());
                     System.out.println("Radius Response: " + radiusResponse);
 
                     // add info to netbox
-                    String deviceparent = device_to_bootstrap.getparent();
-                    if (deviceparent != null && !deviceparent.equalsIgnoreCase("unassigned")) {
-                        int i = deviceparent.lastIndexOf('/');
-                        String parent = deviceparent.substring(0, i);
-                        String group = deviceparent.substring(i + 1);
-                        Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group);
-                        if (optionalGroup.isPresent()) {
-                            String location = optionalGroup.get().getlocation();
-                            String netboxResponse = AddApInfoToNetbox(location, group, serial_num, mac);
-                            System.out.println("Netbox Response: " + netboxResponse);
-                        } else {
-                            System.out.println("ERROR: cannot derive device location from parent " + parent + " and group " + group);
-                        }
-                    } else {
-                        System.out.println("ERROR: device is either null or unassigned");
-                    }
+                    String netboxResponse = AddApInfoToNetbox(device_to_bootstrap.getId());
+                    System.out.println("Netbox Response: " + netboxResponse);
                     
                     break;
                 }
@@ -794,9 +777,43 @@ public class testController {
         }
     }
 
-    private String AddApInfoToNetbox(String site, String device, String sn, String mac) {
-        // GET SITE ID FIRST
+    @PostMapping("/addtonetbox")
+    public String AddApInfoToNetbox(@RequestParam Long id) {
+        device deviceData = null; // device details
+        String site = null; // for parsed device location - eg CDO
+        String group = null; // for parsed device group name - ZEEP CDO
+
         try {
+            // GET DEVICE INFO BY ID
+            Optional<device> optionalDevice = device_front.findById(id); // check if device exists
+            if (optionalDevice.isPresent()) {
+                deviceData = optionalDevice.get(); // retrieve device details
+                String deviceparent = deviceData.getparent(); // get device parent
+
+                // parse device parent and device group
+                if (deviceparent != null && !deviceparent.equalsIgnoreCase("unassigned")) {
+                    int i = deviceparent.lastIndexOf('/');
+                    String parent = deviceparent.substring(0, i);
+                    group = deviceparent.substring(i + 1);
+
+                    Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group); // check if group exists
+                    if (optionalGroup.isPresent()) {
+                        site = optionalGroup.get().getlocation(); // gets location of group
+                    } else {
+                        return "ERROR cannot derive device location and group";
+                    }
+                } else {
+                    return "ERROR device has no group";
+                }
+            } else {
+                return "ERROR device not found";
+            }
+
+            if (site == null && group == null) {
+                return "ERROR device site and group not initialized";
+            }
+
+            // GET SITE ID FIRST
             String siteIdAsString = FindSiteByName(site); // returns site id in string if exists
             Integer siteId = null;
 
@@ -819,16 +836,16 @@ public class testController {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("name", device);
+            requestBody.put("name", deviceData.getdevice_name());
             requestBody.put("device_role", 3);
             requestBody.put("device_type", 105);
-            requestBody.put("serial_number", sn);
+            requestBody.put("serial_number", deviceData.getserial_number());
             requestBody.put("site", siteId);
             requestBody.put("tenant", 16);
             requestBody.put("status", "active");
 
             Map<String, Object> customFields = new HashMap<>();
-            customFields.put("mac_address", mac);
+            customFields.put("mac_address", deviceData.getmac_address());
             requestBody.put("custom_fields", customFields);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
@@ -843,21 +860,51 @@ public class testController {
         }
     }
 
-    private String AddApInfoToRadius(String calledStationId) {
+    @PostMapping("/addtoradius")
+    private String AddApInfoToRadius(@RequestParam Long id) {
+        device deviceData = null; // device details
+        String ssid = null;
         try {
+            // GET DEVICE INFO BY ID
+            Optional<device> optionalDevice = device_front.findById(id); // check if device exists
+            if (optionalDevice.isPresent()) {
+                deviceData = optionalDevice.get(); // retrieve device details
+                Optional<group_command> optionalCommand = GroupCommandRepo.findZeepTemplateByParent(deviceData.getparent());
+                if (optionalCommand.isPresent()) {
+                    group_command commandData = optionalCommand.get();
+                    String template = commandData.getcommand();
+                    Pattern pattern = Pattern.compile("dot11 wlan 2\\s*\\r?\\n\\s*ssid\\s+(.+)", Pattern.CASE_INSENSITIVE);
+                    Matcher matcher = pattern.matcher(template);
+                    if (matcher.find()) {
+                        ssid = matcher.group(1).trim(); // returns "MyNetworkName"
+                    } else {
+                        return "ERROR ssid not found";
+                    }
+                } else {
+                    return "ERROR command not found";
+                }
+            } else {
+                return "ERROR device not found";
+            }
+            
+            if (ssid == null) {
+                return "ERROR device ssid not found";
+            }
+
+            String cleanedMac = deviceData.getmac_address().replaceAll("[:\\-\\s]", "").toLowerCase();
+            String calledStationId = cleanedMac + ":" + ssid;
+            System.out.println("converted mac: " + cleanedMac + ", ssid: " + ssid + ", calledStationId: " + calledStationId);
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
-        System.out.println(optionalAddress.isPresent() ? "Mac address already exists" : "Mac address does not exist");
 
-        if (!optionalAddress.isPresent()) {
-            AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
-            newAddress.setCalledStationId(calledStationId);
-            newAddress.setUpdatedAt(LocalDateTime.now());
-            allowedNasMacAddressRepository.save(newAddress);
-
-            return "Mac address added successfully";
-        } else {
-            return "Mac address already exists";
-        }
+            if (!optionalAddress.isPresent()) {
+                AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
+                newAddress.setCalledStationId(calledStationId);
+                newAddress.setUpdatedAt(LocalDateTime.now());
+                allowedNasMacAddressRepository.save(newAddress);
+                return "Mac address added successfully";
+            } else {
+                return "Mac address already exists";
+            }
         } catch (Exception e) {
             return "An error occurred. " + e.getMessage();
         }
