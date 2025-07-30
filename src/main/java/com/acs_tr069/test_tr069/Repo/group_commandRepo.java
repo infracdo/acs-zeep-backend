@@ -7,7 +7,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
+
+
 
 import com.acs_tr069.test_tr069.Entity.group_command;
 
@@ -21,8 +22,4 @@ public interface group_commandRepo extends CrudRepository<group_command, Long> {
 
     @Query("SELECT d FROM group_command d WHERE d.id=?1")
     group_command getByID(Long id);
-
-    @Query(value = "SELECT * FROM group_command WHERE parent=?1 AND description='zeep_template'", nativeQuery = true)
-    Optional<group_command> findZeepTemplateByParent(String parent);
-
 }

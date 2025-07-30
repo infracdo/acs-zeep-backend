@@ -1,5 +1,6 @@
 package com.acs_tr069.test_tr069.Entity;
 
+import java.sql.Date;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;

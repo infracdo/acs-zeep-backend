@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.acs_tr069.test_tr069.zeep.service.MonitoringService;
 
 @RestController
-@RequestMapping("/api/wifidog/")
+@RequestMapping("/api")
 @CrossOrigin("*")
 public class MonitoringController {
 
