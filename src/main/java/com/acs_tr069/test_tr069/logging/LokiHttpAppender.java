@@ -1,6 +1,7 @@
 package com.acs_tr069.test_tr069.logging;
 
 import ch.qos.logback.core.AppenderBase;
+import net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.PatternLayout;
 
@@ -14,10 +15,47 @@ import java.util.*;
 public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
 
     private String lokiUrl;
-    private String job = "acs-zeep";
-    private String labels = "{}";  // e.g. {app="acs-zeep"}
+    private String job = "api_access_log";
+    private String labels = "{job=\"api_access_log\",host=\"acs-zeep-logs\"}";  // e.g. {app="acs-zeep"}
 
     private PatternLayout layout;
+
+    private LoggingEventCompositeJsonEncoder jsonEncoder;
+
+    public void setJsonEncoder(LoggingEventCompositeJsonEncoder encoder) {
+        this.jsonEncoder = encoder;
+        this.jsonEncoder.setContext(getContext());
+        this.jsonEncoder.start();
+    }
+
+    @Override
+    protected void append(ILoggingEvent event) {
+        if (lokiUrl == null || lokiUrl.isEmpty()) {
+            addError("No Loki URL set for LokiHttpAppender");
+            return;
+        }
+        try {
+            // Encode full event to JSON string
+            String jsonLine;
+            if (jsonEncoder != null) {
+                byte[] jsonBytes = jsonEncoder.encode(event);
+                jsonLine = new String(jsonBytes, StandardCharsets.UTF_8).trim();
+            } else {
+                // fallback to simple message
+                jsonLine = escapeJson(event.getFormattedMessage());
+            }
+
+            String jsonPayload = "{\"streams\":[{\"labels\":\"" + escapeJson(labels) + "\",\"entries\":[" +
+                    "{\"ts\":\"" + formatTimestamp(event.getTimeStamp()) + "\",\"line\":\"" + escapeJson(jsonLine) + "\"}" +
+                    "]}]}";
+
+            addInfo("[LokiHttpAppender] Sending payload to Loki: " + jsonPayload);
+
+            sendToLoki(jsonPayload);
+        } catch (Exception e) {
+            addError("Failed to send log to Loki", e);
+        }
+    }
 
     public void setLokiUrl(String lokiUrl) {
         this.lokiUrl = lokiUrl;
@@ -38,52 +76,9 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
         layout.start();
     }
 
-    @Override
-    protected void append(ILoggingEvent event) {
-        System.out.println("Sending log to Loki: " + event.getFormattedMessage());
-        if (lokiUrl == null || lokiUrl.isEmpty()) {
-            addError("No Loki URL set for LokiHttpAppender");
-            return;
-        }
-
-        try {
-            // Format log message using pattern layout
-            String message = (layout != null) ? layout.doLayout(event) : event.getFormattedMessage();
-
-            // Timestamp in nanoseconds (Loki expects timestamps as strings representing nanoseconds)
-            long timestampNanos = event.getTimeStamp() * 1000000L;
-
-            // Build JSON payload for a single log entry stream
-            // Example payload:
-            /*
-            {
-              "streams": [
-                {
-                  "labels": "{job=\"java-app\",app=\"acs-zeep\"}",
-                  "entries": [
-                    {
-                      "ts": "2020-11-02T20:30:12.123Z",
-                      "line": "log message here"
-                    }
-                  ]
-                }
-              ]
-            }
-            */
-
-            String jsonPayload = "{\"streams\":[{\"labels\":\"" + escapeJson(labels) + "\",\"entries\":[" +
-                    "{\"ts\":\"" + formatTimestamp(event.getTimeStamp()) + "\",\"line\":\"" + escapeJson(message) + "\"}" +
-                    "]}]}";
-
-            sendToLoki(jsonPayload);
-
-        } catch (Exception e) {
-            addError("Failed to send log to Loki", e);
-        }
-    }
-
     private void sendToLoki(String jsonPayload) throws Exception {
         URL url = new URL(lokiUrl);
+        System.out.println("[LokiHttpAppender] url to loki: " + url.toString());
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("POST");
         con.setDoOutput(true);
@@ -96,21 +91,18 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
         }
 
         int responseCode = con.getResponseCode();
-        if (responseCode < 200 || responseCode >= 300) {
+        if (responseCode >= 200 && responseCode < 300) {
+            System.out.println("[LokiHttpAppender] Successfully sent log to Loki: " + labels);
+        } else {
+            System.out.println("[LokiHttpAppender] error while sending log to loki: " + labels);
             addError("Loki HTTP response code: " + responseCode);
         }
         con.disconnect();
     }
 
     private String formatTimestamp(long epochMilli) {
-        // Format to RFC3339Nano for Loki timestamps (ISO 8601 with nanoseconds)
-        // Java 8 has no built-in formatter for nanoseconds, approximate with milliseconds + zeros
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        String formatted = sdf.format(new Date(epochMilli));
-        // Append zeros to simulate nanoseconds (Loki accepts this)
-        return formatted.replace("Z", "000000000Z");
+        long nanoTime = epochMilli * 1_000_000L; // convert milliseconds to nanoseconds
+        return Long.toString(nanoTime);
     }
 
     private String escapeJson(String s) {

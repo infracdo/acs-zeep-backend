@@ -13,10 +13,33 @@
   </appender>
 
   <appender name="LOKI_HTTP" class="com.acs_tr069.test_tr069.logging.LokiHttpAppender">
-      <lokiUrl>${LOKI_URL}</lokiUrl>
-      <job>springboot</job>
-      <labels>{app="acs-zeep"}</labels>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    <lokiUrl>${LOKI_URL}</lokiUrl>
+    <labels>{job="acs-zeep",host="acs-zeep-logs"}</labels>
+    <jsonEncoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <timestamp>
+          <fieldName>timestamp</fieldName>
+          <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+        </timestamp>
+        <threadName />
+        <logLevel />
+        <loggerName />
+        <message />
+        <mdc>
+          <includeMdcKeyName>method</includeMdcKeyName>
+          <includeMdcKeyName>uri</includeMdcKeyName>
+          <includeMdcKeyName>status</includeMdcKeyName>
+          <includeMdcKeyName>durationMs</includeMdcKeyName>
+          <includeMdcKeyName>clientIp</includeMdcKeyName>
+          <includeMdcKeyName>requestIp</includeMdcKeyName>
+          <includeMdcKeyName>userId</includeMdcKeyName>
+          <includeMdcKeyName>username</includeMdcKeyName>
+          <includeMdcKeyName>sessionId</includeMdcKeyName>
+          <includeMdcKeyName>clientId</includeMdcKeyName>
+          <includeMdcKeyName>userAgent</includeMdcKeyName>
+        </mdc>
+      </providers>
+    </jsonEncoder>
   </appender>
 
   <!-- JSON file appender for API access logs -->
