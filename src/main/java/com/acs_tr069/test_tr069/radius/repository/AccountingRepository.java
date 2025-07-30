@@ -1,6 +1,8 @@
 package com.acs_tr069.test_tr069.radius.repository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -120,6 +122,10 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "FROM accounting ",
         nativeQuery = true)
     List<String> findAllAccessPoints();
+    
+    // Query to get the list of access points
+    @Query(value = "SELECT DISTINCT called_station_id FROM accounting ", nativeQuery = true)
+    Map<String, String> findAllAccessPointsInfo();
 
     // Query to get number of currently connected users per access point
     // @Query(value = "SELECT called_station_id, COUNT(DISTINCT calling_station_id) as user_count " +

@@ -66,7 +66,6 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
             ObjectMapper mapper = new ObjectMapper();
             String payloadJson = mapper.writeValueAsString(payload);
 
-            System.out.println("[LokiHttpAppender] Sending payload: " + payloadJson);
             sendToLoki(payloadJson);
         } catch (Exception e) {
             addError("Failed to send log to Loki", e);
@@ -112,7 +111,6 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
 
                 int responseCode = con.getResponseCode();
                 if (responseCode >= 200 && responseCode < 300) {
-                    System.out.println("[LokiHttpAppender] Successfully sent log to Loki");
                     con.disconnect();
                     return;
                 } else {
