@@ -53,14 +53,12 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
 
             String timestamp = formatTimestamp(event.getTimeStamp());
 
-            // Construct Loki payload using Jackson
-            Map<String, Object> entry = new HashMap<>();
-            entry.put("ts", timestamp);
-            entry.put("line", jsonLine);
-
+            // Construct Loki payload using the required "values" array format
             Map<String, Object> stream = new HashMap<>();
-            stream.put("labels", labels);
-            stream.put("entries", Collections.singletonList(entry));
+            stream.put("stream", labels);
+            stream.put("values", Collections.singletonList(
+                new String[] { timestamp, jsonLine }
+            ));
 
             Map<String, Object> payload = new HashMap<>();
             payload.put("streams", Collections.singletonList(stream));
