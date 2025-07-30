@@ -14,7 +14,6 @@
 
   <appender name="LOKI_HTTP" class="com.acs_tr069.test_tr069.logging.LokiHttpAppender">
     <lokiUrl>${LOKI_URL}</lokiUrl>
-    <!-- <labels>{job="acs-zeep"}</labels> -->
     <jsonEncoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
       <providers>
         <timestamp>
@@ -61,7 +60,6 @@
         <loggerName />
         <message />
         <mdc>
-          <!-- Only include relevant keys -->
           <includeMdcKeyName>method</includeMdcKeyName>
           <includeMdcKeyName>uri</includeMdcKeyName>
           <includeMdcKeyName>status</includeMdcKeyName>
@@ -86,6 +84,6 @@
   <!-- API Access logger only logs to JSON file -->
   <logger name="com.acs_tr069.test_tr069.Filter.ApiAccessLogFilter" level="INFO" additivity="false">
     <appender-ref ref="API_ACCESS_FILE" />
-    <appender-ref ref="LOKI_HTTP"/>
+    <!-- <appender-ref ref="LOKI_HTTP"/> -->
   </logger>
 </configuration>
