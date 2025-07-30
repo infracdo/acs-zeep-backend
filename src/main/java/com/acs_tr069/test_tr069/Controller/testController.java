@@ -515,14 +515,14 @@ public class testController {
                     device_to_bootstrap.setstatus("synced");
                     device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
-                    
-                    // add info to radius
-                    String radiusResponse = AddApInfoToRadius(device_to_bootstrap.getId());
-                    System.out.println("Radius Response: " + radiusResponse);
 
                     // add info to netbox
                     String netboxResponse = AddApInfoToNetbox(device_to_bootstrap.getId());
                     System.out.println("Netbox Response: " + netboxResponse);
+
+                    // add info to radius
+                    String radiusResponse = AddApInfoToRadius(device_to_bootstrap.getId());
+                    System.out.println("Radius Response: " + radiusResponse);
                     
                     break;
                 }
@@ -770,12 +770,12 @@ public class testController {
                         return String.valueOf(json.getInt("id")); // return id as string
                     }
                 } catch (JSONException e) {
-                    return "JSON ERROR";
+                    return "SITE CREATION JSON ERROR";
                 }
             } 
-            return "ERROR CODE " + response.getStatusCodeValue();
+            return "SITE CREATION REQUEST ERROR " + response.getStatusCodeValue();
         } catch (Exception e) {
-            return "ERROR " + e.getMessage(); 
+            return "UNEXPECTED ERROR " + e.getMessage(); 
         }
     }
 
@@ -795,6 +795,9 @@ public class testController {
                 // parse device parent and device group
                 if (deviceparent != null && !deviceparent.equalsIgnoreCase("unassigned")) {
                     int i = deviceparent.lastIndexOf('/');
+                    if (i < 0) {
+                        return "ERROR DEVICE INVALID PARENT FORMAT";
+                    }
                     String parent = deviceparent.substring(0, i);
                     group = deviceparent.substring(i + 1);
 
@@ -820,15 +823,13 @@ public class testController {
             Integer siteId = null;
 
             System.out.println("site " + site + " " + siteIdAsString);
-            if (siteIdAsString != null && !siteIdAsString.contains("ERROR")) { // if query doesnt return 'error' or 'not found' then site exists, store site id
-                siteId = Integer.valueOf(siteIdAsString); 
-            } else { // if it doesnt exist, create new site
+            if (siteIdAsString == null || siteIdAsString.contains("ERROR")) {
                 siteIdAsString = CreateSite(site);
             }
-
-            if (siteIdAsString != null && !(siteIdAsString.contains("ERROR") || siteIdAsString.contains("NOT FOUND"))) {  // if creation doesnt return 'error' or 'not found' then query successful, store site id
-                siteId = Integer.valueOf(siteIdAsString); 
-            } 
+            if (siteIdAsString == null || siteIdAsString.contains("ERROR")) {
+                return "SITE CREATION ERROR FAILED TO CREATE SITE";
+            }
+            siteId = Integer.valueOf(siteIdAsString);
 
             // CREATE DEVICE 
             String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
@@ -854,17 +855,18 @@ public class testController {
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
             RestTemplate restTemplate = new RestTemplate();
+            System.out.println("sending device creation request to netbox " + deviceData.getserial_number());
             ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
 
             System.out.println("response body " + response.getBody());
-            return response.getStatusCodeValue() == 201 ? "Device added successfully" : "Failed to add device: " + response.getStatusCodeValue();
+            int status = response.getStatusCodeValue();
+            return (status >= 200 && status < 300) ? "Device added successfully" : "ERROR DEVICE CREATION FAILED " + status;
         } catch (Exception e) {
             return "ERROR " + e.getMessage();
         }
     }
 
-    @PostMapping("/addtoradius")
-    public String AddApInfoToRadius(@RequestParam Long id) {
+    private String AddApInfoToRadius(Long id) {
         device deviceData = null; // device details
         // String ssid = null;
         try {
