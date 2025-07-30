@@ -9,14 +9,20 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
 
     private String lokiUrl;
     private String job = "api_access_log";
-    private String labels = "{job=\"api_access_log\",host=\"acs-zeep-logs\"}";  // e.g. {app="acs-zeep"}
+    private Map<String, String> labels = new HashMap<String, String>() {{
+        put("job", "api_access_log");
+        put("host", "acs-zeep-logs");
+    }};
 
     private PatternLayout layout;
 
@@ -31,27 +37,39 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
     @Override
     protected void append(ILoggingEvent event) {
         if (lokiUrl == null || lokiUrl.isEmpty()) {
-            addError("No Loki URL set for LokiHttpAppender");
+            addError("No Loki URL configured.");
             return;
         }
+
         try {
-            // Encode full event to JSON string
+            // Serialize the log event into JSON
             String jsonLine;
             if (jsonEncoder != null) {
                 byte[] jsonBytes = jsonEncoder.encode(event);
                 jsonLine = new String(jsonBytes, StandardCharsets.UTF_8).trim();
             } else {
-                // fallback to simple message
-                jsonLine = escapeJson(event.getFormattedMessage());
+                jsonLine = event.getFormattedMessage();
             }
 
-            String jsonPayload = "{\"streams\":[{\"labels\":\"" + escapeJson(labels) + "\",\"entries\":[" +
-                    "{\"ts\":\"" + formatTimestamp(event.getTimeStamp()) + "\",\"line\":\"" + escapeJson(jsonLine) + "\"}" +
-                    "]}]}";
+            String timestamp = formatTimestamp(event.getTimeStamp());
 
-            addInfo("[LokiHttpAppender] Sending payload to Loki: " + jsonPayload);
+            // Construct Loki payload using Jackson
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("ts", timestamp);
+            entry.put("line", jsonLine);
 
-            sendToLoki(jsonPayload);
+            Map<String, Object> stream = new HashMap<>();
+            stream.put("labels", labels);
+            stream.put("entries", Collections.singletonList(entry));
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("streams", Collections.singletonList(stream));
+
+            ObjectMapper mapper = new ObjectMapper();
+            String payloadJson = mapper.writeValueAsString(payload);
+
+            System.out.println("[LokiHttpAppender] Sending payload: " + payloadJson);
+            sendToLoki(payloadJson);
         } catch (Exception e) {
             addError("Failed to send log to Loki", e);
         }
@@ -65,7 +83,7 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
         this.job = job;
     }
 
-    public void setLabels(String labels) {
+    public void setLabels(Map<String, String> labels) {
         this.labels = labels;
     }
 
@@ -77,37 +95,46 @@ public class LokiHttpAppender extends AppenderBase<ILoggingEvent> {
     }
 
     private void sendToLoki(String jsonPayload) throws Exception {
-        URL url = new URL(lokiUrl);
-        System.out.println("[LokiHttpAppender] url to loki: " + url.toString());
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setDoOutput(true);
-        con.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-        byte[] payloadBytes = jsonPayload.getBytes(StandardCharsets.UTF_8);
-        con.setFixedLengthStreamingMode(payloadBytes.length);
+        int attempts = 3;
+        int delayMs = 1000;
 
-        try (OutputStream os = con.getOutputStream()) {
-            os.write(payloadBytes);
+        for (int i = 0; i < attempts; i++) {
+            try {
+                URL url = new URL(lokiUrl);
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setRequestMethod("POST");
+                con.setDoOutput(true);
+                con.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                byte[] payloadBytes = jsonPayload.getBytes(StandardCharsets.UTF_8);
+                con.setFixedLengthStreamingMode(payloadBytes.length);
+
+                try (OutputStream os = con.getOutputStream()) {
+                    os.write(payloadBytes);
+                }
+
+                int responseCode = con.getResponseCode();
+                if (responseCode >= 200 && responseCode < 300) {
+                    System.out.println("[LokiHttpAppender] Successfully sent log to Loki");
+                    con.disconnect();
+                    return;
+                } else {
+                    addError("Loki HTTP response code: " + responseCode);
+                }
+
+                con.disconnect();
+            } catch (Exception e) {
+                addError("Retry " + (i + 1) + " failed: " + e.getMessage(), e);
+            }
+
+            Thread.sleep(delayMs); // wait before retrying
         }
 
-        int responseCode = con.getResponseCode();
-        if (responseCode >= 200 && responseCode < 300) {
-            System.out.println("[LokiHttpAppender] Successfully sent log to Loki: " + labels);
-        } else {
-            System.out.println("[LokiHttpAppender] error while sending log to loki: " + labels);
-            addError("Loki HTTP response code: " + responseCode);
-        }
-        con.disconnect();
+        addError("All Loki send attempts failed.");
     }
+
 
     private String formatTimestamp(long epochMilli) {
         long nanoTime = epochMilli * 1_000_000L; // convert milliseconds to nanoseconds
         return Long.toString(nanoTime);
-    }
-
-    private String escapeJson(String s) {
-        // Simple JSON string escape (quotes and backslashes)
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

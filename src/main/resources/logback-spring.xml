@@ -14,7 +14,7 @@
 
   <appender name="LOKI_HTTP" class="com.acs_tr069.test_tr069.logging.LokiHttpAppender">
     <lokiUrl>${LOKI_URL}</lokiUrl>
-    <labels>{job="acs-zeep",host="acs-zeep-logs"}</labels>
+    <!-- <labels>{job="acs-zeep"}</labels> -->
     <jsonEncoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
       <providers>
         <timestamp>
