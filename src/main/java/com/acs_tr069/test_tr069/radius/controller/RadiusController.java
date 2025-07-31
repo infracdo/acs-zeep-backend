@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.acs_tr069.test_tr069.Entity.device;
+import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 import com.acs_tr069.test_tr069.radius.service.RadiusService;
 
 @RestController
@@ -24,8 +26,11 @@ public class RadiusController {
 
     @Autowired
     private RadiusService radiusService;
+    
+    @Autowired
+    private device_frontendRepository deviceRepo;
 
-    // Get number of currently connected users
+    // Get number of current active users
     @GetMapping("count-currently-connected-users")
     public ResponseEntity<Map<String, Object>> getCountCurrentlyConnectedUsers() {
         long currentlyConnectedUsers = radiusService.getCountCurrentlyConnectedUsers();
@@ -36,7 +41,7 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
 
-    // Get number of currently connected access points
+    // Get number of current active access points
     // @PreAuthorize("hasRole('ROLE_API_ACCESS')")
     @GetMapping("count-currently-connected-aps")
     public ResponseEntity<Map<String, Object>> getCountCurrentlyConnectedAPs() {
@@ -96,6 +101,12 @@ public class RadiusController {
         Map<String, Object> response = new HashMap<>();
         response.put("accessPoints", accessPoints);
         return ResponseEntity.ok(response);
+    }
+
+    // Get list of access points info
+    @GetMapping("access-points-info")
+    public ResponseEntity<List<device>> getAllAPInfo() {
+        return ResponseEntity.ok(deviceRepo.getZeepDevices("zeep"));
     }
 
     // Get number of currently connected users per access point

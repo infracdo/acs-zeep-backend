@@ -125,7 +125,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     
     // Query to get the list of access points
     @Query(value = "SELECT DISTINCT called_station_id FROM accounting ", nativeQuery = true)
-    Map<String, String> findAllAccessPointsInfo();
+    List<Accounting> findAllAccessPointsInfo();
 
     // Query to get number of currently connected users per access point
     // @Query(value = "SELECT called_station_id, COUNT(DISTINCT calling_station_id) as user_count " +

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.acs_tr069.test_tr069.radius.entity.Accounting;
 import com.acs_tr069.test_tr069.radius.repository.AccountingRepository;
 
 @Service
@@ -125,6 +126,11 @@ public class RadiusService {
     // Return list of access points
     public List<String> getAllAccessPoints() {
         return accountingRepository.findAllAccessPoints();
+    }
+    
+    // Return list of access points
+    public List<Accounting> getAllAPInfo() {
+        return accountingRepository.findAllAccessPointsInfo();
     }
 
     // Return currently connected users per access point
