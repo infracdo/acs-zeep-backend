@@ -512,9 +512,6 @@ public class testController {
                 Integer NumRemainingTask = remainingTask.size();
                 if (NumRemainingTask < 1) {
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
-                    device_to_bootstrap.setstatus("synced");
-                    device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
-                    device_front.save(device_to_bootstrap);
 
                     // add info to netbox
                     String netboxResponse = AddApInfoToNetbox(device_to_bootstrap.getId());
@@ -523,6 +520,10 @@ public class testController {
                     // add info to radius
                     String radiusResponse = AddApInfoToRadius(device_to_bootstrap.getId());
                     System.out.println("Radius Response: " + radiusResponse);
+
+                    device_to_bootstrap.setstatus("synced");
+                    device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+                    device_front.save(device_to_bootstrap);
                     
                     break;
                 }
