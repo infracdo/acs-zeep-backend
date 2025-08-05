@@ -28,6 +28,9 @@ public interface device_frontendRepository extends CrudRepository<device, Long>{
    device getBySerialNum(String serial_number);
 
    @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% AND LOWER(d.status) = 'online'")
-   List<device> getZeepDevices(String keyword);
+   List<device> getOnlineZeepDevices(String keyword);
+
+   @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% ")
+   List<device> getAllZeepDevices(String keyword);
 
 }
