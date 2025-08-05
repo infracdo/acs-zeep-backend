@@ -59,20 +59,17 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // );
     // NOTE: since we couldn't just query directly the access points with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT COUNT(DISTINCT called_station_id) " +
-        "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
+    @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting a1 WHERE a1.acctstatustype = 'Start'" +
         // "AND time_stamp >= :startOfDay " +
         // "AND time_stamp < :endOfDay",
-        "AND NOT EXISTS (" +
-        "   SELECT 1 FROM accounting a2 " +
-        "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.called_station_id = a1.called_station_id " +
-        "   AND a2.time_stamp >= a1.time_stamp" +
+        "AND NOT EXISTS (SELECT 1 FROM accounting a2 WHERE a2.acctstatustype = 'Stop' AND a2.calling_station_id = a1.calling_station_id AND a2.called_station_id = a1.called_station_id AND a2.time_stamp >= a1.time_stamp" +
         // "   AND a2.time_stamp < :endOfDay" +     // uncomment if you need to get the currently connected users for today
         ")",
         nativeQuery = true)
     long countCurrentlyConnectedAPs();
+
+    @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting a1", nativeQuery = true)
+    long countTotalAPs();
 
     // Query to get the total user connections for today
     @Query(value = "SELECT COUNT(DISTINCT calling_station_id) " +
@@ -85,6 +82,13 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         @Param("endOfDay") long endOfDay
     );
 
+    // Query to get the total user connections for today
+    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype = 'Start' AND time_stamp >= :startOfDay AND time_stamp < :endOfDay", nativeQuery = true)
+    long countTotalSessionsToday(
+        @Param("startOfDay") long startOfDay,
+        @Param("endOfDay") long endOfDay
+    );
+
     // Query to get the total bandwidth consumption for today
     @Query(value = "SELECT COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) " +
         "FROM accounting " +
@@ -92,6 +96,19 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "AND time_stamp < :endOfDay",
         nativeQuery = true)
     long totalBandwidthConsumptionToday(
+        @Param("startOfDay") long startOfDay,
+        @Param("endOfDay") long endOfDay
+    );
+
+    // Query to get the total session time for today
+    @Query(value = "SELECT COALESCE(SUM(acctsessiontime), 0) " +
+        "FROM accounting " +
+        "WHERE acctstatustype = 'Stop' " +
+        "AND acctsessiontime > 0" +
+        "AND time_stamp >= :startOfDay " +
+        "AND time_stamp < :endOfDay",
+        nativeQuery = true)
+    Double totalSessionTimeToday(
         @Param("startOfDay") long startOfDay,
         @Param("endOfDay") long endOfDay
     );

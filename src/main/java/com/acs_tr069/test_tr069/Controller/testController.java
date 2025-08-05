@@ -1233,10 +1233,7 @@ public class testController {
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
         if (!appReady || httplogreqRepo == null || device_front == null) {
-            System.out.println("Skipping DeviceStatusUpdate: app not ready or repos not initialized.");
             return;
-        } else {
-            System.out.println("DeviceStatusUpdate: app is ready, proceeding with device status update.");
         }
         
         Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll();

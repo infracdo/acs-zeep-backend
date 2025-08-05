@@ -41,6 +41,29 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
 
+    // Get number of total users
+    @GetMapping("count-total-users")
+    public ResponseEntity<Map<String, Object>> getCountTotalUsers() {
+        long totalUsers = radiusService.getCountTotalUsers();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalUsers", totalUsers);
+
+        return ResponseEntity.ok(response);
+    }
+
+    
+    // Get number of total aps
+    @GetMapping("count-total-aps")
+    public ResponseEntity<Map<String, Object>> getCountTotalAPs() {
+        long totalAPs = radiusService.getCountTotalAPs();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalAPs", totalAPs);
+
+        return ResponseEntity.ok(response);
+    }
+
     // Get number of current active access points
     // @PreAuthorize("hasRole('ROLE_API_ACCESS')")
     @GetMapping("count-currently-connected-aps")
@@ -64,6 +87,17 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
 
+    // Get total number of user sessions for today
+    @GetMapping("total-user-sessions-today")
+    public ResponseEntity<Map<String, Object>> getTotalUserSessionsToday() {
+        long totalUserSessions = radiusService.getCountTotalSessionsToday();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalUserSessionsToday", totalUserSessions);
+
+        return ResponseEntity.ok(response);
+    }
+
     // Get total bandwidth consumption for today
     @GetMapping("total-bandwidth-consumption-today")
     public ResponseEntity<Map<String, Object>> getTotalBandwidthConsumptionToday() {
@@ -71,6 +105,18 @@ public class RadiusController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("totalBandwidthConsumptionToday", formattedTotalBandwidth);
+
+        return ResponseEntity.ok(response);
+    }
+
+    
+    // Get total session time for today
+    @GetMapping("total-session-time-today")
+    public ResponseEntity<Map<String, Object>> getTotalSessionTimeToday() {
+        String formattedTotalTime = radiusService.getTotalSessionTimeToday();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalSessionTimeToday", formattedTotalTime);
 
         return ResponseEntity.ok(response);
     }
@@ -104,9 +150,15 @@ public class RadiusController {
     }
 
     // Get list of access points info
-    @GetMapping("access-points-info")
-    public ResponseEntity<List<device>> getAllAPInfo() {
-        return ResponseEntity.ok(deviceRepo.getZeepDevices("zeep"));
+    @GetMapping("access-points-online")
+    public ResponseEntity<List<device>> getAllOnlineAP() {
+        return ResponseEntity.ok(deviceRepo.getOnlineZeepDevices("zeep"));
+    }
+
+    // Get list of access points info
+    @GetMapping("access-points-all")
+    public ResponseEntity<List<device>> getAllAP() {
+        return ResponseEntity.ok(deviceRepo.getAllZeepDevices("zeep"));
     }
 
     // Get number of currently connected users per access point

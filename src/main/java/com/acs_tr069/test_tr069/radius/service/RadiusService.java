@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
+import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
 import org.springframework.stereotype.Service;
 
 import com.acs_tr069.test_tr069.radius.entity.Accounting;
@@ -15,10 +15,13 @@ import com.acs_tr069.test_tr069.radius.repository.AccountingRepository;
 @Service
 public class RadiusService {
 
+    private final SubscriberRepository subscriberRepository;
+
     private final AccountingRepository accountingRepository;
 
-    public RadiusService(AccountingRepository accountingRepository) {
+    public RadiusService(AccountingRepository accountingRepository, SubscriberRepository subscriberRepository) {
         this.accountingRepository = accountingRepository;
+        this.subscriberRepository = subscriberRepository;
     }
 
 
@@ -40,6 +43,16 @@ public class RadiusService {
         // Uncomment if you need to get the currently connected users for today --
 
         return accountingRepository.countCurrentlyConnectedUsers();
+    }
+    
+    // Return number of total users
+    public Long getCountTotalUsers() {
+        return subscriberRepository.countTotalUsers();
+    }
+
+    // Return number of total users
+    public Long getCountTotalAPs() {
+        return accountingRepository.countTotalAPs();
     }
 
     // Return number of currently connected access points
@@ -77,6 +90,22 @@ public class RadiusService {
         return accountingRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
     }
 
+    // Return the total number of user connections for today
+    public Long getCountTotalSessionsToday() {
+        long startOfDay = LocalDate.now()
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        // NOTE: for testing purposes
+        // long startOfDay = LocalDate.of(2025, 5, 16)
+        //     .atStartOfDay()
+        //     .toEpochSecond(ZoneOffset.UTC);
+
+        long endOfDay = startOfDay + 86400;
+
+        return accountingRepository.countTotalSessionsToday(startOfDay, endOfDay);
+    }
+
     // Return total bandwidth consumption for today
     public String getTotalBandwidthConsumptionToday() {
         long startOfDay = LocalDate.now()
@@ -93,6 +122,19 @@ public class RadiusService {
         long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
 
         return formatBytes(totalRawBytes);
+    }
+
+    // Return total session time for today
+    public String getTotalSessionTimeToday() {
+        long startOfDay = LocalDate.now()
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        long endOfDay = startOfDay + 86400;
+
+        Double totalSeconds = accountingRepository.totalSessionTimeToday(startOfDay, endOfDay);
+
+        return formatDuration(totalSeconds);
     }
 
     // Return average connection time
