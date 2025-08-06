@@ -35,6 +35,7 @@
           <includeMdcKeyName>status</includeMdcKeyName>
           <includeMdcKeyName>durationMs</includeMdcKeyName>
           <includeMdcKeyName>clientIp</includeMdcKeyName>
+          <includeMdcKeyName>requestIp</includeMdcKeyName>
           <includeMdcKeyName>userId</includeMdcKeyName>
           <includeMdcKeyName>username</includeMdcKeyName>
           <includeMdcKeyName>sessionId</includeMdcKeyName>
