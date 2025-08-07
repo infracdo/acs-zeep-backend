@@ -23,11 +23,9 @@
       <providers>
         <timestamp>
           <fieldName>timestamp</fieldName>
-          <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+          <pattern>yyyy-MM-dd HH:mm:ss</pattern>
         </timestamp>
-        <threadName />
         <logLevel />
-        <loggerName />
         <message />
         <mdc>
           <includeMdcKeyName>method</includeMdcKeyName>
@@ -35,7 +33,7 @@
           <includeMdcKeyName>status</includeMdcKeyName>
           <includeMdcKeyName>durationMs</includeMdcKeyName>
           <includeMdcKeyName>clientIp</includeMdcKeyName>
-          <includeMdcKeyName>requestIp</includeMdcKeyName>
+          <!-- <includeMdcKeyName>requestIp</includeMdcKeyName> -->
           <includeMdcKeyName>userId</includeMdcKeyName>
           <includeMdcKeyName>username</includeMdcKeyName>
           <includeMdcKeyName>sessionId</includeMdcKeyName>

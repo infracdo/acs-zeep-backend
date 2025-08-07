@@ -143,6 +143,27 @@ public class RadiusService {
         return formatDuration(avgSeconds);
     }
 
+    // Return average connection time for the month
+    public String getAverageConnectionTimeForMonth() {
+        LocalDate now = LocalDate.now();
+
+        long startOfMonth = now.withDayOfMonth(1)
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        long startOfNextMonth = now.plusMonths(1)
+            .withDayOfMonth(1)
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        Double avgSeconds = accountingRepository.findAverageConnectionTime(startOfMonth, startOfNextMonth);
+        
+        if (avgSeconds == null) {
+            return "-mins, -s";
+        }
+        return formatDuration(avgSeconds);
+    }
+
     // Return average bandwidth per connection
     public String getAverageBandwidthPerConnection() {
         // -- Uncomment if you need to get the currently connected users for today
@@ -161,6 +182,26 @@ public class RadiusService {
         Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection();
 
         if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "0 B/s";
+
+        return formatBandwidth(avgBytesPerSec);
+    }
+
+    // Return average bandwidth per connection for the month
+    public String getAverageBandwidthForMonth() {
+        LocalDate now = LocalDate.now();
+
+        long startOfMonth = now.withDayOfMonth(1)
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        long startOfNextMonth = now.plusMonths(1)
+            .withDayOfMonth(1)
+            .atStartOfDay()
+            .toEpochSecond(ZoneOffset.UTC);
+
+        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection(startOfMonth, startOfNextMonth);
+
+        if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "- B/s";
 
         return formatBandwidth(avgBytesPerSec);
     }
