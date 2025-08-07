@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 public class ApiAccessLogFilter extends OncePerRequestFilter {
@@ -36,12 +37,11 @@ public class ApiAccessLogFilter extends OncePerRequestFilter {
         try {
             // Put context info into MDC
             MDC.put("method", request.getMethod());
+            
             String uri = request.getRequestURI();
             String query = request.getQueryString();
-            if (query != null && !query.isEmpty()) {
-                uri += "?" + query;
-            }
             MDC.put("uri", uri);
+            MDC.put("payload", query != null ? query : ""); // adds query parameters to payload
 
             String forwarded = request.getHeader("X-Forwarded-For");
             String clientIp = (forwarded != null) ? forwarded.split(",")[0].trim() : request.getRemoteAddr();
@@ -63,7 +63,8 @@ public class ApiAccessLogFilter extends OncePerRequestFilter {
             MDC.put("status", String.valueOf(response.getStatus()));
 
             // Log after the request is processed
-            logger.info("API Access Log");
+            // TODO; set message as the user action if frontend logs user activity
+            logger.info("API call to backend");
 
             // Clear MDC to avoid leaking info to other requests
             MDC.clear();

@@ -128,6 +128,13 @@ public class RadiusController {
         return ResponseEntity.ok(Collections.singletonMap("averageConnectionTime", formattedTime));
     }
 
+    // Get average connection time for the month
+    @GetMapping("average-connection-time-for-month")
+    public ResponseEntity<Map<String, Object>> getAverageConnectionTimeForMonth() {
+        String formattedTime = radiusService.getAverageConnectionTimeForMonth();
+        return ResponseEntity.ok(Collections.singletonMap("averageConnectionTimeForMonth", formattedTime));
+    }
+
     // Get average bandwidth per connection
     @GetMapping("average-bandwidth-per-connection")
     public ResponseEntity<Map<String, Object>> getAverageBandwidthPerConnection() {
@@ -135,6 +142,17 @@ public class RadiusController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("averageBandwidthPerConnection", avgBandwidth);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Get average bandwidth per connection for the month
+    @GetMapping("average-bandwidth-for-month")
+    public ResponseEntity<Map<String, Object>> getAverageBandwidthForMonth() {
+        String avgBandwidth = radiusService.getAverageBandwidthForMonth();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("averageBandwidthForMonth", avgBandwidth);
 
         return ResponseEntity.ok(response);
     }

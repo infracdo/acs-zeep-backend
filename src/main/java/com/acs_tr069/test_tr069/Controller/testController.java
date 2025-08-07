@@ -780,8 +780,7 @@ public class testController {
         }
     }
 
-    @PostMapping("/addtonetbox")
-    public String AddApInfoToNetbox(@RequestParam Long id) {
+    private String AddApInfoToNetbox(Long id) {
         device deviceData = null; // device details
         String site = null; // for parsed device location - eg CDO
         String group = null; // for parsed device group name - ZEEP CDO
@@ -2053,6 +2052,11 @@ public class testController {
         
 		return commands;
     }
+
+    // @PostMapping(path = "/api/sendlog") // logs user action from frontend
+    // public ResponseEntity<String> logAction(@RequestParam String action, @RequestParam String status, @RequestParam String service, @RequestParam String payload, @RequestParam String clientIp) throws JSONException, IOException {
+    //     return new ResponseEntity<String>("logged user action", HttpStatus.OK);
+    // }
 
 	@PostMapping("/adddevice")
 	public device postGroup(@RequestBody device DEVICE) {
