@@ -6,7 +6,7 @@
   <!-- Properties -->
   <springProperty name="LOKI_URL" source="loki.url" />
   <property name="LOG_DIR" value="/var/log/" />
-  <property name="APP_NAME" value="acs-zeep" />
+  <property name="APP_NAME" value="zeep-talos" />
 
   <!-- Console appender for local debugging -->
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
