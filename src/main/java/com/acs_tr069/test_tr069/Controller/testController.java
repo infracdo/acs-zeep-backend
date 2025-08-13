@@ -2052,7 +2052,7 @@ public class testController {
         
 		return commands;
     }
-
+    // TODO; continue progress
     // @PostMapping(path = "/api/sendlog") // logs user action from frontend
     // public ResponseEntity<String> logAction(@RequestParam String action, @RequestParam String status, @RequestParam String service, @RequestParam String payload, @RequestParam String clientIp) throws JSONException, IOException {
     //     return new ResponseEntity<String>("logged user action", HttpStatus.OK);
