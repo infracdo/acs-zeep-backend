@@ -104,7 +104,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     @Query(value = "SELECT COALESCE(SUM(acctsessiontime), 0) " +
         "FROM accounting " +
         "WHERE acctstatustype = 'Stop' " +
-        "AND acctsessiontime > 0" +
+        "AND acctsessiontime > 0 " +
         "AND time_stamp >= :startOfDay " +
         "AND time_stamp < :endOfDay",
         nativeQuery = true)
