@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - zeep-backend-sbx # Trigger on pushes to the main branch
+      - zeep-backend-sbx-talos # Trigger on pushes to the main branch
 
 jobs:
   build-and-push:
