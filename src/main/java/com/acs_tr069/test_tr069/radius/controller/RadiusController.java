@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.acs_tr069.test_tr069.Entity.device;
@@ -155,6 +156,13 @@ public class RadiusController {
         response.put("averageBandwidthForMonth", avgBandwidth);
 
         return ResponseEntity.ok(response);
+    }
+
+    // Get access point device name
+    @GetMapping("ap-device-name")
+    public ResponseEntity<String> getAPDeviceName(@RequestParam String mac) {
+        String deviceName = deviceRepo.getDeviceNameByMac(mac);
+        return ResponseEntity.ok(deviceName);
     }
 
     // Get list of access points
