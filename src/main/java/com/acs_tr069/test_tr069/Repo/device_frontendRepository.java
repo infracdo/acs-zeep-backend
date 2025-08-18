@@ -27,6 +27,9 @@ public interface device_frontendRepository extends CrudRepository<device, Long>{
    @Query("SELECT d FROM device d WHERE d.serial_number=?1")
    device getBySerialNum(String serial_number);
 
+   @Query("SELECT d.device_name FROM device d WHERE d.mac_address=?1")
+   String getDeviceNameByMac(String mac_address);
+
    @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% AND LOWER(d.status) = 'online'")
    List<device> getOnlineZeepDevices(String keyword);
 
