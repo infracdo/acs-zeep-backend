@@ -29,8 +29,8 @@ public class LokiHttpAppenderWithBatching extends AppenderBase<ILoggingEvent> {
     private Thread workerThread;
 
     private Map<String, String> labels = new HashMap<String, String>() {{
-        put("job", "api_access_log");
-        put("host", "acs-zeep-logs");
+        put("job", "zeep-sbx-api");
+        put("host", "zeep-sbx-log");
     }};
 
     public void setLokiUrl(String lokiUrl) {
