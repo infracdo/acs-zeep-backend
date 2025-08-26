@@ -698,7 +698,13 @@ public class testController {
     private String GetDeviceSerialNum(HttpServletRequest request) {
 
         // String currentCookie = request.getHeader("Cookie").split(",")[0];
-        String currentCookie = request.getHeader("Cookie").split(";")[0];
+        String currentCookie = Collections.list(request.getHeaderNames()).stream()
+        .filter(h -> h.equalsIgnoreCase("cookie"))
+        .map(request::getHeader)
+        .findFirst()
+        .map(c -> c.split(";")[0])
+        .orElse(null);
+
         //System.out.println("CurrentCookie --- " + currentCookie);
         String DeviceSN = null;
         if (httplogreqRepo.findByCookie(currentCookie).isEmpty() == false) {
