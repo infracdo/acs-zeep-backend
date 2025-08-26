@@ -383,7 +383,7 @@ public class testController {
                     } else {
                         device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                         if(!device_to_bootstrap.getparent().matches("unassigned")){
-                            //System.out.println("bootstraping : " + device_to_bootstrap.getserial_number());
+                            System.out.println("bootstraping via checkdeviceeventcode for device " + device_to_bootstrap.getserial_number());
                             if (!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())) {
                                 device_to_bootstrap.setstatus("syncing");
                                 device_front.save(device_to_bootstrap);
@@ -490,7 +490,7 @@ public class testController {
                 ApplyOldCommand(serial_num, sb.toString());
             }
 
-            //System.out.println("Adding SSID: " + serial_num);
+            System.out.println("Adding SSID for device " + serial_num);
             // Add Nat
             String ObjectName = "{,Command:macc nat-config vlan 233 network 10.233.2.0 255.255.255.0,Command:interface BVI 233,Command:ip address 10.233.2.1 255.255.255.0,Command:ip nat inside,Command:end,Command:write,}";
             SaveTask(serial_num, "Command", ObjectName, "config");
@@ -508,9 +508,11 @@ public class testController {
             SaveTask(serial_num, "Command", ObjectName, "config");
             // Change device Status
             while (true) {
+                System.out.println("attempting to find remaining tasks for device " + serial_num);
                 List<taskhandler> remainingTask = taskhandlerRepo.findBySerialNumEquals(serial_num);
                 Integer NumRemainingTask = remainingTask.size();
                 if (NumRemainingTask < 1) {
+                    System.out.println("no remaining tasks left for device " + serial_num);
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
 
                     // add info to netbox
@@ -524,6 +526,7 @@ public class testController {
                     device_to_bootstrap.setstatus("synced");
                     device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
+                    System.out.println("finished bootstrapping for device " + serial_num);
                     
                     break;
                 }
@@ -1745,11 +1748,14 @@ public class testController {
     @RequestMapping(value="/MoveDeviceGroup/{SerialNum}")
     public String MoveDeviceGroup(@PathVariable String SerialNum){
         device device_to_bootstrap = device_front.getBySerialNum(SerialNum);
+        System.out.println("attempting to move device group for device " + SerialNum);
         if(!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())){
+            System.out.println("setting status to syncing for device " + SerialNum);
             device_to_bootstrap.setstatus("syncing");
             device_front.save(device_to_bootstrap);
             Bootstraping(SerialNum);
         }        
+        System.out.println("finished moving device group for device " + SerialNum);
         return "MoveDeviceGroup Initiated";
     }
 
