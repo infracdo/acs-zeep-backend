@@ -90,7 +90,7 @@
   </root>
 
   <logger name="com.acs_tr069.test_tr069.Filter.ApiAccessLogFilter" level="INFO" additivity="false">
-    <appender-ref ref="LOKI_HTTP_BATCHED"/>
+    <!-- <appender-ref ref="LOKI_HTTP_BATCHED"/> -->
     <!-- <appender-ref ref="API_ACCESS_FILE"/> -->
   </logger>
 
