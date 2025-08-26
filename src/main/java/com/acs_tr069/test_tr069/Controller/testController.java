@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -145,7 +147,11 @@ public class testController {
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
         System.out.println("xml payload: "+xmlPayload);
-        System.out.println("request: "+ request);
+        String headers = Collections.list(request.getHeaderNames()).stream()
+        .map(name -> name + ": " + request.getHeader(name))
+        .collect(Collectors.joining(", ", "Request Headers: {", "}"));
+
+        System.out.println("request headers: " + headers);
         //System.out.println("Start: " + LocalTime.now());
         DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
         String DeviceSerialNum = null;
