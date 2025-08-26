@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - zeep-talos-backend-prod # Trigger on pushes to the main branch
+  #pull_request:  # Trigger on pull requests
 
 jobs:
   build-and-push:
