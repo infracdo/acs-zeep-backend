@@ -144,7 +144,8 @@ public class testController {
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
-        System.out.println(xmlPayload);
+        System.out.println("xml payload: "+xmlPayload);
+        System.out.println("request: "+ request);
         //System.out.println("Start: " + LocalTime.now());
         DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
         String DeviceSerialNum = null;
@@ -508,7 +509,7 @@ public class testController {
             SaveTask(serial_num, "Command", ObjectName, "config");
             // Change device Status
             while (true) {
-                System.out.println("attempting to find remaining tasks for device " + serial_num);
+                System.out.println("attempting to run remaining tasks for device " + serial_num);
                 List<taskhandler> remainingTask = taskhandlerRepo.findBySerialNumEquals(serial_num);
                 Integer NumRemainingTask = remainingTask.size();
                 if (NumRemainingTask < 1) {
