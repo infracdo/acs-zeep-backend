@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -144,7 +146,12 @@ public class testController {
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
-        System.out.println(xmlPayload);
+        System.out.println("xml payload: "+xmlPayload);
+        String headers = Collections.list(request.getHeaderNames()).stream()
+        .map(name -> name + ": " + request.getHeader(name))
+        .collect(Collectors.joining(", ", "Request Headers: {", "}"));
+
+        System.out.println("request headers: " + headers);
         //System.out.println("Start: " + LocalTime.now());
         DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
         String DeviceSerialNum = null;
@@ -383,7 +390,7 @@ public class testController {
                     } else {
                         device device_to_bootstrap = device_front.getBySerialNum(serial_num);
                         if(!device_to_bootstrap.getparent().matches("unassigned")){
-                            //System.out.println("bootstraping : " + device_to_bootstrap.getserial_number());
+                            System.out.println("bootstraping via checkdeviceeventcode for device " + device_to_bootstrap.getserial_number());
                             if (!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())) {
                                 device_to_bootstrap.setstatus("syncing");
                                 device_front.save(device_to_bootstrap);
@@ -490,7 +497,7 @@ public class testController {
                 ApplyOldCommand(serial_num, sb.toString());
             }
 
-            //System.out.println("Adding SSID: " + serial_num);
+            System.out.println("Adding SSID for device " + serial_num);
             // Add Nat
             String ObjectName = "{,Command:macc nat-config vlan 233 network 10.233.2.0 255.255.255.0,Command:interface BVI 233,Command:ip address 10.233.2.1 255.255.255.0,Command:ip nat inside,Command:end,Command:write,}";
             SaveTask(serial_num, "Command", ObjectName, "config");
@@ -508,9 +515,11 @@ public class testController {
             SaveTask(serial_num, "Command", ObjectName, "config");
             // Change device Status
             while (true) {
+                System.out.println("attempting to run remaining tasks for device " + serial_num);
                 List<taskhandler> remainingTask = taskhandlerRepo.findBySerialNumEquals(serial_num);
                 Integer NumRemainingTask = remainingTask.size();
                 if (NumRemainingTask < 1) {
+                    System.out.println("no remaining tasks left for device " + serial_num);
                     device device_to_bootstrap = device_front.getBySerialNum(serial_num);
 
                     // add info to netbox
@@ -524,6 +533,7 @@ public class testController {
                     device_to_bootstrap.setstatus("synced");
                     device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
+                    System.out.println("finished bootstrapping for device " + serial_num);
                     
                     break;
                 }
@@ -688,12 +698,18 @@ public class testController {
     private String GetDeviceSerialNum(HttpServletRequest request) {
 
         // String currentCookie = request.getHeader("Cookie").split(",")[0];
-        String currentCookie = request.getHeader("Cookie").split(";")[0];
-        //System.out.println("CurrentCookie --- " + currentCookie);
+        String currentCookie = Collections.list(request.getHeaderNames()).stream()
+        .filter(h -> h.equalsIgnoreCase("cookie"))
+        .map(request::getHeader)
+        .findFirst()
+        .map(c -> c.split(";")[0])
+        .orElse(null);
+
         String DeviceSN = null;
         if (httplogreqRepo.findByCookie(currentCookie).isEmpty() == false) {
             DeviceSN = httplogreqRepo.getByCookie(currentCookie).get_SN();
         }
+        System.out.println("returning cookie  --- " + currentCookie + " from serial number " + DeviceSN);
         return DeviceSN;
     }
 
@@ -764,7 +780,7 @@ public class testController {
 
             System.out.println("create site response body " + response.getBody());
             
-            if (response.getStatusCodeValue() == 200) {
+            if (response.getStatusCode().is2xxSuccessful()) {
                 try {
                     JSONObject json = new JSONObject(response.getBody());
                     if (json.has("id")) {
@@ -1745,11 +1761,14 @@ public class testController {
     @RequestMapping(value="/MoveDeviceGroup/{SerialNum}")
     public String MoveDeviceGroup(@PathVariable String SerialNum){
         device device_to_bootstrap = device_front.getBySerialNum(SerialNum);
+        System.out.println("attempting to move device group for device " + SerialNum);
         if(!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())){
+            System.out.println("setting status to syncing for device " + SerialNum);
             device_to_bootstrap.setstatus("syncing");
             device_front.save(device_to_bootstrap);
             Bootstraping(SerialNum);
         }        
+        System.out.println("finished moving device group for device " + SerialNum);
         return "MoveDeviceGroup Initiated";
     }
 
