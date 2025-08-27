@@ -705,11 +705,11 @@ public class testController {
         .map(c -> c.split(";")[0])
         .orElse(null);
 
-        //System.out.println("CurrentCookie --- " + currentCookie);
         String DeviceSN = null;
         if (httplogreqRepo.findByCookie(currentCookie).isEmpty() == false) {
             DeviceSN = httplogreqRepo.getByCookie(currentCookie).get_SN();
         }
+        System.out.println("returning cookie  --- " + currentCookie + " from serial number " + DeviceSN);
         return DeviceSN;
     }
 
@@ -780,7 +780,7 @@ public class testController {
 
             System.out.println("create site response body " + response.getBody());
             
-            if (response.getStatusCodeValue() == 200) {
+            if (response.getStatusCode().is2xxSuccessful()) {
                 try {
                     JSONObject json = new JSONObject(response.getBody());
                     if (json.has("id")) {
