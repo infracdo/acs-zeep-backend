@@ -1275,25 +1275,25 @@ public class testController {
             device currentDevice = device_front.getBySerialNum(serialNumber);
 
             if (currentDevice == null) {
-                System.out.println("cannot find " + httprequestlog.get_SN() + " in device");
+                System.out.println("cannot find " + serialNumber + " in device");
                 continue;
             }
-            System.out.println("device status for " + currentDevice.getserial_number() + " is currently " + currentDevice.getstatus());
+            System.out.println("device status for " + serialNumber + " is currently " + currentDevice.getstatus());
             
             if(!currentDevice.getstatus().contains("syncing")){
                 if(intervalMin>3){ // if last request was more than 3 minutes ago, set as offline
-                    System.out.println("device " + currentDevice.getserial_number() + " last request is over 3 minutes ");
+                    System.out.println("device " + serialNumber + " last request is over 3 minutes ");
                     String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
                     currentDevice.setdate_offline(offlineTime);
                     device_front.save(currentDevice);
-                    UpdateDeviceStatus(httprequestlog.get_SN(), "offline");
+                    UpdateDeviceStatus(serialNumber, "offline");
                     if(currentDevice.getparent().matches("unassigned")){
                         device_front.delete(currentDevice);
-                        System.out.println("deleted offline rogue device " + currentDevice.getserial_number());
+                        System.out.println("deleted offline rogue device " + serialNumber);
                     }
                 }
                 else{
-                    UpdateDeviceStatus(httprequestlog.get_SN(), "online");
+                    UpdateDeviceStatus(serialNumber, "online");
                 }
             }
         }
