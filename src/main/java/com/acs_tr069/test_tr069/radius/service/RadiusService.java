@@ -1,5 +1,7 @@
 package com.acs_tr069.test_tr069.radius.service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.HashMap;
@@ -26,7 +28,7 @@ public class RadiusService {
 
 
     // Return number of currently connected users
-    public Long getCountCurrentlyConnectedUsers() {
+    public Long getCountOnlineUsers() {
         // -- Uncomment if you need to get the currently connected users for today
         // long startOfDay = LocalDate.now()
         //     .atStartOfDay()
@@ -42,12 +44,24 @@ public class RadiusService {
         // return accountingRepository.countCurrentlyConnectedUsers(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
 
-        return accountingRepository.countCurrentlyConnectedUsers();
+        return accountingRepository.countOnlineUsers();
     }
-    
-    // Return number of total users
-    public Long getCountTotalUsers() {
-        return subscriberRepository.countTotalUsers();
+
+    // Return number of active users
+    public Long getCountActiveUsers(String timeframe) {
+        long startTime = getTimestampsForTimeframe(timeframe);
+        return accountingRepository.countActiveUsers(startTime);
+    }
+
+    // Return number of inactive users
+    public Long getCountInactiveUsers(String timeframe) {
+        long startTime = getTimestampsForTimeframe(timeframe);
+        return accountingRepository.countInactiveUsers(startTime);
+    }
+
+    // Return number of registered users
+    public Long getCountRegisteredUsers() {
+        return subscriberRepository.countRegisteredUsers();
     }
 
     // Return number of total users
@@ -55,8 +69,8 @@ public class RadiusService {
         return accountingRepository.countTotalAPs();
     }
 
-    // Return number of currently connected access points
-    public Long getCountCurrentlyConnectedAPs() {
+    // Return number of current access points in use
+    public Long getCountOnlineAPs() {
         // -- Uncomment if you need to get the currently connected users for today
         // long startOfDay = LocalDate.now()
         //     .atStartOfDay()
@@ -71,7 +85,41 @@ public class RadiusService {
 
         // return accountingRepository.countCurrentlyConnectedAPs(startOfDay, endOfDay);
         // Uncomment if you need to get the currently connected users for today --
-        return accountingRepository.countCurrentlyConnectedAPs();
+        return accountingRepository.countOnlineAPs();
+    }
+
+    // Return number of currently active access points in the past x days
+    public Long getCountActiveAPs(String timeframe) {
+        long startTime = getTimestampsForTimeframe(timeframe);
+        return accountingRepository.countActiveAPs(startTime);
+    }
+
+    // Return number of currently inactive access points
+    public Long getCountInactiveAPs(String timeframe) {
+        long startTime = getTimestampsForTimeframe(timeframe);
+        return accountingRepository.countInactiveAPs(startTime);
+    }
+
+    private long getTimestampsForTimeframe(String timeframe) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate;
+
+        switch (timeframe.toLowerCase()) {
+            case "24h":
+                startDate = today.minusDays(1);
+                break;
+            case "7d":
+                startDate = today.minusDays(7);
+                break;
+            case "30d":
+                startDate = today.minusDays(30);
+                break;
+            default:
+                startDate = today.minusDays(1);
+                break;
+        }
+
+        return startDate.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
     }
 
     // Return the total number of user connections for today
@@ -269,12 +317,11 @@ public class RadiusService {
             
             Map<String, Object> userDetails = new HashMap<>();
             userDetails.put("username", row[1]);
-            userDetails.put("acctinputoctets", row[2]);
-            userDetails.put("acctoutputoctets", row[3]);
+            userDetails.put("acctinputoctets", row[2] != null ? row[2] : 0);
+            userDetails.put("acctoutputoctets", row[3] != null ? row[3] : 0);
             userDetails.put("nasport", row[4]);
             userDetails.put("calling_station_id", row[5]);
             userDetails.put("timestamp", row[6]);
-
             response.computeIfAbsent(called_station_id, k -> new java.util.ArrayList<>()).add(userDetails);
         }
 
