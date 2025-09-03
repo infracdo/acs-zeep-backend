@@ -30,10 +30,10 @@ public interface device_frontendRepository extends CrudRepository<device, Long>{
    @Query("SELECT d.device_name FROM device d WHERE d.mac_address=?1")
    String getDeviceNameByMac(String mac_address);
 
-   @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% AND LOWER(d.status) = 'online'")
-   List<device> getOnlineZeepDevices(String keyword);
+   @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% AND LOWER(d.status) =?2")
+   List<device> getDevicesByParentAndStatus(String keyword, String status);
 
    @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% ")
-   List<device> getAllZeepDevices(String keyword);
+   List<device> getAllDevicesByParent(String keyword);
 
 }

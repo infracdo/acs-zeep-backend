@@ -31,28 +31,49 @@ public class RadiusController {
     @Autowired
     private device_frontendRepository deviceRepo;
 
-    // Get number of current active users
-    @GetMapping("count-currently-connected-users")
-    public ResponseEntity<Map<String, Object>> getCountCurrentlyConnectedUsers() {
-        long currentlyConnectedUsers = radiusService.getCountCurrentlyConnectedUsers();
+    // returns number of users currently connected to APs
+    @GetMapping("count-online-users")
+    public ResponseEntity<Map<String, Object>> getCountCurrentOnlineUsers() {
+        long currentOnlineUsers = radiusService.getCountOnlineUsers();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("currentlyConnectedUsers", currentlyConnectedUsers);
+        response.put("countOnlineUsers", currentOnlineUsers);
 
         return ResponseEntity.ok(response);
     }
 
-    // Get number of total users
-    @GetMapping("count-total-users")
-    public ResponseEntity<Map<String, Object>> getCountTotalUsers() {
-        long totalUsers = radiusService.getCountTotalUsers();
+    // returns number of active users
+    @GetMapping("count-active-users")
+    public ResponseEntity<Map<String, Object>> getCountActiveUsers(@RequestParam(required = false, defaultValue = "24h") String timeframe) {
+        long activeUsers = radiusService.getCountActiveUsers(timeframe);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("totalUsers", totalUsers);
+        response.put("countActiveUsers", activeUsers);
 
         return ResponseEntity.ok(response);
     }
 
+    // Get number of active users
+    @GetMapping("count-inactive-users")
+    public ResponseEntity<Map<String, Object>> getCountInactiveUsers(@RequestParam(required = false, defaultValue = "24h") String timeframe) {
+        long inactiveUsers = radiusService.getCountInactiveUsers(timeframe);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("countInactiveUsers", inactiveUsers);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Get number of registered users
+    @GetMapping("count-registered-users")
+    public ResponseEntity<Map<String, Object>> getCountRegisteredUsers() {
+        long registeredUsers = radiusService.getCountRegisteredUsers();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("countRegisteredUsers", registeredUsers);
+
+        return ResponseEntity.ok(response);
+    }
     
     // Get number of total aps
     @GetMapping("count-total-aps")
@@ -60,19 +81,41 @@ public class RadiusController {
         long totalAPs = radiusService.getCountTotalAPs();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("totalAPs", totalAPs);
+        response.put("countTotalAPs", totalAPs);
 
         return ResponseEntity.ok(response);
     }
 
-    // Get number of current active access points
+    // Get number of current online access points
     // @PreAuthorize("hasRole('ROLE_API_ACCESS')")
-    @GetMapping("count-currently-connected-aps")
-    public ResponseEntity<Map<String, Object>> getCountCurrentlyConnectedAPs() {
-        long currentlyConnectedAPs = radiusService.getCountCurrentlyConnectedAPs();
+    @GetMapping("count-online-aps")
+    public ResponseEntity<Map<String, Object>> getCountOnlineAPs() {
+        long currentlyOnlineAPs = radiusService.getCountOnlineAPs();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("currentlyConnectedAPs", currentlyConnectedAPs);
+        response.put("countOnlineAPs", currentlyOnlineAPs);
+
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get number of current active access points
+    @GetMapping("count-active-aps")
+    public ResponseEntity<Map<String, Object>> getCountActiveAPs(@RequestParam(required = false, defaultValue = "24h") String timeframe) {
+        long currentlyActiveAPs = radiusService.getCountActiveAPs(timeframe);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("countActiveAPs", currentlyActiveAPs);
+
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get number of current inactive access points
+    @GetMapping("count-inactive-aps")
+    public ResponseEntity<Map<String, Object>> getCountInactiveAPs(@RequestParam(required = false, defaultValue = "24h") String timeframe) {
+        long currentlyInactiveAPs = radiusService.getCountInactiveAPs(timeframe);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("countInactiveAPs", currentlyInactiveAPs);
 
         return ResponseEntity.ok(response);
     }
@@ -175,16 +218,22 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
 
-    // Get list of access points info
+    // Get list of online access points info
     @GetMapping("access-points-online")
     public ResponseEntity<List<device>> getAllOnlineAP() {
-        return ResponseEntity.ok(deviceRepo.getOnlineZeepDevices("zeep"));
+        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("zeep", "online"));
+    }
+
+    // Get list of offline access points info
+    @GetMapping("access-points-offline")
+    public ResponseEntity<List<device>> getAllOfflineAP() {
+        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("zeep", "offline"));
     }
 
     // Get list of access points info
-    @GetMapping("access-points-all")
+    @GetMapping("access-points-zeep")
     public ResponseEntity<List<device>> getAllAP() {
-        return ResponseEntity.ok(deviceRepo.getAllZeepDevices("zeep"));
+        return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("zeep"));
     }
 
     // Get number of currently connected users per access point

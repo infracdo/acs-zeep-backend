@@ -127,7 +127,7 @@ public class testController {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         appReady = true;
-        System.out.println("Application ready, scheduled tasks can start");
+        System.out.println("application ready, scheduled tasks can start");
     }
 
     /*
@@ -1244,50 +1244,58 @@ public class testController {
     //     //UpdateItem();
     // }
 
-
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
         if (!appReady || httplogreqRepo == null || device_front == null) {
+            System.out.println("app not ready, skipped device status update");
             return;
         }
         
-        Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll();
+        Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); // TODO; create function that joins with device table to reduce db access
+        System.out.println("retrieved device list from httprequestlog");
+        Long offlineThreshold = env.getProperty("device.offline.mins", Long.class, 3L);
+        Long fallbackMs = env.getProperty("device.offline.fallback.ms", Long.class, 300000L);
         for (httprequestlog httprequestlog : listOfDevices) {
-            Long interval;
-            Timestamp currentTime = new Timestamp(System.currentTimeMillis());
-            Long timeInterval = (long) 0;
-            try {
-                timeInterval = currentTime.getTime() - httprequestlog.get_lastRequest().getTime();    
-            } catch (Exception e) {
-                timeInterval = (long) (60000*5);
+            String serialNumber = httprequestlog.get_SN();
+            if (serialNumber == null || serialNumber.isEmpty()) {
+                System.out.println("found no serial number, skipping entry");
+                continue;
+            }
+
+            Timestamp lastRequest = httprequestlog.get_lastRequest();
+            Long timeIntervalMs = 0L;
+            if (lastRequest == null) {
+                timeIntervalMs = fallbackMs;
+            } else {
+                timeIntervalMs = System.currentTimeMillis() - lastRequest.getTime();
             }
             
-            interval = timeInterval/60000;
-            device curent_device = null;
-            while(true){
-                if (httprequestlog.get_SN() == null) continue;
-                if(httprequestlog.get_SN()!=null){
-                    curent_device = device_front.getBySerialNum(httprequestlog.get_SN());
-                    break;
-                }
-            } 
-            if (curent_device == null) return;
-            if(curent_device.getstatus().contains("syncing")==false){
-                if(interval>3){
-                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
-                    LocalDateTime now = LocalDateTime.now();
-                    curent_device.setdate_offline(dtf.format(now));
-                    device_front.save(curent_device);
-                    UpdateDeviceStatus(httprequestlog.get_SN(), "offline");
-                    System.out.println("Saved to database: " + curent_device.getId());
-                    if(curent_device.getparent().matches("unassigned")){
-                        device_front.delete(curent_device);
-                        System.out.println("Removed from database: " + curent_device.getId());
+            Long intervalMin = timeIntervalMs/60000;
+            device currentDevice = device_front.getBySerialNum(serialNumber);
+
+            if (currentDevice == null) {
+                continue;
+            }
+            System.out.println("device status for " + serialNumber + " is currently " + currentDevice.getstatus());
+            
+            if(!currentDevice.getstatus().contains("syncing")){
+                if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
+                    System.out.println("device " + serialNumber + " last request is over " + offlineThreshold + " minutes ");
+                    String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
+                    currentDevice.setdate_offline(offlineTime);
+                    device_front.save(currentDevice);
+                    if (!"offline".equals(currentDevice.getstatus())) {
+                        UpdateDeviceStatus(serialNumber, "offline");
+                    }
+                    if("unassigned".equals(currentDevice.getparent())){
+                        device_front.delete(currentDevice);
+                        System.out.println("deleted offline rogue device " + serialNumber);
                     }
                 }
                 else{
-                    UpdateDeviceStatus(httprequestlog.get_SN(), "online");
-                    System.out.println("Saved to database: " + curent_device.getId());
+                    if (!"online".equals(currentDevice.getstatus())) {
+                        UpdateDeviceStatus(serialNumber, "online");
+                    }
                 }
             }
         }
@@ -1514,6 +1522,7 @@ public class testController {
             devicestat.setstatus(Status);
         }
         device_front.save(devicestat);
+        System.out.println("device status of " + devicestat.getserial_number() + " is now " + devicestat.getstatus());
     }
   
     private String Tr069ResponseHandler(String Method, String Parameters, String Option){

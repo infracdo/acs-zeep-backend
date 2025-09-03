@@ -14,7 +14,7 @@ public interface SubscriberRepository extends CrudRepository<Subscribers, Long> 
   List<Subscribers> findAll();
 
   @Query(value = "SELECT COUNT(*) FROM subscribers", nativeQuery = true)
-  long countTotalUsers();
+  long countRegisteredUsers();
 
   Optional<Subscribers> findByUsername(String username);
 }
