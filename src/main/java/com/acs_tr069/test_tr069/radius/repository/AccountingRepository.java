@@ -178,20 +178,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // );
     // NOTE: since we couldn't just query directly the users with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
-        "FROM accounting a1 " +
-        "WHERE a1.acctstatustype = 'Start' " +
-        // "AND a1.time_stamp >= :startOfDay " +    // Uncomment if need to get currently connected users for today
-        // "AND a1.time_stamp < :endOfDay " +       // Uncomment if need to get currently connected users for today
-        "AND NOT EXISTS (" +
-        "   SELECT 1 FROM accounting a2 " +
-        "   WHERE a2.acctstatustype = 'Stop' " +
-        "   AND a2.calling_station_id = a1.calling_station_id " +
-        "   AND a2.time_stamp >= a1.time_stamp " +
-        // "   AND a2.time_stamp < :endOfDay " +    // Uncomment if you need to get currently connected users for today
-        ")" +
-        "ORDER BY a1.called_station_id, a1.time_stamp DESC",
-        nativeQuery = true)
+    @Query(value = "SELECT sub.called_station_id, sub.username, sub.acctinputoctets, sub.acctoutputoctets, sub.nasport, sub.calling_station_id, sub.time_stamp FROM (SELECT a1.* FROM accounting a1 WHERE a1.acctstatustype IN ('Start', 'Alive') AND NOT EXISTS (SELECT 1 FROM accounting a2 WHERE a2.acctstatustype = 'Stop' AND a2.calling_station_id = a1.calling_station_id AND a2.time_stamp >= a1.time_stamp)) sub INNER JOIN (SELECT calling_station_id, MAX(time_stamp) AS max_time FROM accounting WHERE acctstatustype IN ('Start', 'Alive') GROUP BY calling_station_id) latest ON sub.calling_station_id = latest.calling_station_id AND sub.time_stamp = latest.max_time ORDER BY sub.called_station_id, sub.time_stamp DESC", nativeQuery = true)
     List<Object[]> findCurrentlyConnectedUsersPerAP(
         // @Param("startOfDay") long startOfDay,    // Uncomment if need to get currently connected users for today
         // @Param("endOfDay") long endOfDay         // Uncomment if need to get currently connected users for today
