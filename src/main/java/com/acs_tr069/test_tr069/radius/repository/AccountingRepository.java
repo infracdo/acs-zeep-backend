@@ -29,7 +29,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
     @Query(value = "SELECT COUNT(DISTINCT a1.calling_station_id) " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype IN ('Start', 'Alive') " +
+        "WHERE a1.acctstatustype = 'Start' " +
         // "AND a1.time_stamp >= :startOfDay " +    // uncomment if you need to get the currently connected users for today
         // "AND a1.time_stamp < :endOfDay " +       // uncomment if you need to get the currently connected users for today
         "AND NOT EXISTS (" +
@@ -59,7 +59,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // );
     // NOTE: since we couldn't just query directly the access points with acctstatustype of 'Start' as the table only inserts data (no updating nor removing a data),
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
-    @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting a1 WHERE a1.acctstatustype IN ('Start', 'Alive')" +
+    @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting a1 WHERE a1.acctstatustype = 'Start'" +
         // "AND time_stamp >= :startOfDay " +
         // "AND time_stamp < :endOfDay",
         "AND NOT EXISTS (SELECT 1 FROM accounting a2 WHERE a2.acctstatustype = 'Stop' AND a2.calling_station_id = a1.calling_station_id AND a2.called_station_id = a1.called_station_id AND a2.time_stamp >= a1.time_stamp" +
@@ -88,11 +88,11 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     long countTotalUserConnectionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype IN ('Start', 'Alive') AND time_stamp >= :startOfDay", nativeQuery = true)
+    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype = 'Start' AND time_stamp >= :startOfDay", nativeQuery = true)
     long countTotalSessionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total bandwidth consumption for today
-    @Query(value = "SELECT COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) FROM accounting WHERE time_stamp >= :startOfDay", nativeQuery = true)
+    @Query(value = "SELECT COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) FROM accounting WHERE acctstatustype = 'Stop' AND time_stamp >= :startOfDay", nativeQuery = true)
     long totalBandwidthConsumptionToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total session time for today
@@ -100,22 +100,12 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     Double totalSessionTimeToday(@Param("startOfDay") long startOfDay);
 
     // Query to get average connection time
-    @Query(value = "SELECT AVG(acctsessiontime) " +
-        "FROM accounting " +
-        "WHERE acctstatustype = 'Stop' " +
-        "AND acctsessiontime > 0",
-    nativeQuery = true)
+    @Query(value = "SELECT AVG(acctsessiontime) FROM accounting WHERE acctstatustype = 'Stop' AND acctsessiontime > 0", nativeQuery = true)
     Double findAverageConnectionTime();
 
     // Query to get average connection time
-    @Query(value = "SELECT COALESCE(AVG(acctsessiontime), 0) " +
-        "FROM accounting " +
-        "WHERE acctstatustype = 'Stop' " +
-        "AND time_stamp >= :startOfMonth " +
-        "AND time_stamp < :endOfMonth " +
-        "AND acctsessiontime > 0",
-    nativeQuery = true)
-    Double findAverageConnectionTime(@Param("startOfMonth") long startOfMonth, @Param("endOfMonth") long endOfMonth);
+    @Query(value = "SELECT COALESCE(AVG(acctsessiontime), 0) FROM accounting WHERE acctstatustype = 'Stop' AND time_stamp >= :startOfMonth AND acctsessiontime > 0", nativeQuery = true)
+    Double findAverageConnectionTime(@Param("startOfMonth") long startOfMonth);
 
     // Query to get the average bandwidth per connection
     @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) / a.acctsessiontime) " +
@@ -131,14 +121,8 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     );
     
     // Query to get the average bandwidth per connection
-    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) / a.acctsessiontime) " +
-        "FROM accounting a " +
-        "WHERE a.acctstatustype = 'Stop' " +
-        "AND time_stamp >= :startOfMonth " +
-        "AND time_stamp < :endOfMonth " +
-        "AND a.acctsessiontime > 0",
-    nativeQuery = true)
-    Double findAverageBandwidthPerConnection(@Param("startOfMonth") long startOfMonth, @Param("endOfMonth") long endOfMonth);
+    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) / a.acctsessiontime) FROM accounting a WHERE a.acctstatustype = 'Stop' AND time_stamp >= :startOfMonth AND a.acctsessiontime > 0", nativeQuery = true)
+    Double findAverageBandwidthPerConnection(@Param("startOfMonth") long startOfMonth);
 
     // Query to get the list of access points
     @Query(value = "SELECT DISTINCT called_station_id " +
@@ -166,7 +150,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
     @Query(value = "SELECT a1.called_station_id, COUNT(DISTINCT a1.calling_station_id) as user_count " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype IN ('Start', 'Alive') " +
+        "WHERE a1.acctstatustype = 'Start' " +
         // "AND a1.time_stamp >= :startOfDay " +   // Uncomment if you need to get the currently connected users for today
         // "AND a1.time_stamp < :endOfDay " +      // Uncomment if you need to get the currently connected users for today
         "AND NOT EXISTS (" +
@@ -196,7 +180,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     // we just have to make sure that the certain 'Start' session doesn't have a corresponding 'Stop' status type
     @Query(value = "SELECT a1.called_station_id, a1.username, a1.acctinputoctets, a1.acctoutputoctets, a1.nasport, a1.calling_station_id, a1.time_stamp " +
         "FROM accounting a1 " +
-        "WHERE a1.acctstatustype IN ('Start', 'Alive') " +
+        "WHERE a1.acctstatustype = 'Start' " +
         // "AND a1.time_stamp >= :startOfDay " +    // Uncomment if need to get currently connected users for today
         // "AND a1.time_stamp < :endOfDay " +       // Uncomment if need to get currently connected users for today
         "AND NOT EXISTS (" +

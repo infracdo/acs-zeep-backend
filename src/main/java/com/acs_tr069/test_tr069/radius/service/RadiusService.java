@@ -1,9 +1,12 @@
 package com.acs_tr069.test_tr069.radius.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -134,18 +137,8 @@ public class RadiusService {
 
     // Return average connection time for the month
     public String getAverageConnectionTimeForMonth() {
-        LocalDate now = LocalDate.now();
-
-        long startOfMonth = now.withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long startOfNextMonth = now.plusMonths(1)
-            .withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        Double avgSeconds = accountingRepository.findAverageConnectionTime(startOfMonth, startOfNextMonth);
+        long startOfMonth = getTimestampsForTimeframe("month");
+        Double avgSeconds = accountingRepository.findAverageConnectionTime(startOfMonth);
         
         if (avgSeconds == null) {
             return "-mins, -s";
@@ -177,20 +170,10 @@ public class RadiusService {
 
     // Return average bandwidth per connection for the month
     public String getAverageBandwidthForMonth() {
-        LocalDate now = LocalDate.now();
+        long startOfMonth = getTimestampsForTimeframe("month");
+        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection(startOfMonth);
 
-        long startOfMonth = now.withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long startOfNextMonth = now.plusMonths(1)
-            .withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection(startOfMonth, startOfNextMonth);
-
-        if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "- B/s";
+        if (avgBytesPerSec == null) return "- B/s";
 
         return formatBandwidth(avgBytesPerSec);
     }
@@ -272,30 +255,36 @@ public class RadiusService {
 
     // HELPER METHODS //
     private long getTimestampsForTimeframe(String timeframe) {
-        ZoneId manila = ZoneId.of("Asia/Manila");
-        ZonedDateTime now = ZonedDateTime.now(manila);
-
-        ZonedDateTime start;
+        LocalDateTime now = LocalDateTime.now(); // System time assumed to be UTC
+        LocalDateTime start;
 
         switch (timeframe.toLowerCase()) {
             case "today":
-                start = now.toLocalDate().atStartOfDay(manila);
+                start = now.toLocalDate().atStartOfDay();
                 break;
-            case "24h":
-                start = now.minusHours(24);
+            case "week": // ISO standard: week starts on Monday
+                start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                        .toLocalDate().atStartOfDay();
+                break;
+            case "month":
+                start = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+                break;
+            case "1d":
+                start = now.minusDays(1).toLocalDate().atStartOfDay();
                 break;
             case "7d":
-                start = now.minusDays(7);
+                start = now.minusDays(7).toLocalDate().atStartOfDay();
                 break;
             case "30d":
-                start = now.minusDays(30);
+                start = now.minusDays(30).toLocalDate().atStartOfDay();
                 break;
             default:
-                start = now.minusHours(24);
-                break;
+                // fallback to 24h from now (exact)
+                return now.minusHours(24).toEpochSecond(ZoneOffset.UTC);
         }
 
-        long startEpoch = start.toEpochSecond();
+        long startEpoch = start.toEpochSecond(ZoneOffset.UTC);
+        System.out.println("Generated UTC epoch for \"" + timeframe + "\": " + startEpoch);
         return startEpoch;
     }
 

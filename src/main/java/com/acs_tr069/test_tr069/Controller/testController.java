@@ -1251,8 +1251,8 @@ public class testController {
         }
         
         Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); // TODO; create function that joins with device table to reduce db access
-        Long offlineThreshold = env.getProperty("device.offline.mins", Long.class, 3L);
-        Long fallbackMs = env.getProperty("device.offline.fallback.ms", Long.class, 300000L);
+        Long offlineThreshold = 3L;
+        Long fallbackMs = 300000L;
         for (httprequestlog httprequestlog : listOfDevices) {
             String serialNumber = httprequestlog.get_SN();
             if (serialNumber == null || serialNumber.isEmpty()) {
