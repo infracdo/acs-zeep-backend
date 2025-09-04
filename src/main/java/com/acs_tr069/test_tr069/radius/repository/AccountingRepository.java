@@ -108,7 +108,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     Double findAverageConnectionTime(@Param("startOfMonth") long startOfMonth);
 
     // Query to get the average bandwidth per connection
-    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) / a.acctsessiontime) " +
+    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) * 1.0 / a.acctsessiontime) " +
         "FROM accounting a " +
         "WHERE a.acctstatustype = 'Stop' " +
         "AND a.acctsessiontime > 0",
@@ -121,7 +121,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     );
     
     // Query to get the average bandwidth per connection
-    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) / a.acctsessiontime) FROM accounting a WHERE a.acctstatustype = 'Stop' AND time_stamp >= :startOfMonth AND a.acctsessiontime > 0", nativeQuery = true)
+    @Query(value = "SELECT AVG((a.acctinputoctets + a.acctoutputoctets) * 1.0 / a.acctsessiontime) FROM accounting a WHERE a.acctstatustype = 'Stop' AND time_stamp >= :startOfMonth AND a.acctsessiontime > 0", nativeQuery = true)
     Double findAverageBandwidthPerConnection(@Param("startOfMonth") long startOfMonth);
 
     // Query to get the list of access points
