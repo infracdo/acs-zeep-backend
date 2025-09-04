@@ -260,8 +260,7 @@ public class RadiusService {
                 start = now.toLocalDate().atStartOfDay();
                 break;
             case "week": // ISO standard: week starts on Monday
-                start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                        .toLocalDate().atStartOfDay();
+                start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay();
                 break;
             case "month":
                 start = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
@@ -276,7 +275,6 @@ public class RadiusService {
                 start = now.minusDays(30).toLocalDate().atStartOfDay();
                 break;
             default:
-                // fallback to 24h from now (exact)
                 return now.minusHours(24).toEpochSecond(ZoneOffset.UTC);
         }
 
