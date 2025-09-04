@@ -229,13 +229,19 @@ public class RadiusController {
         return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("", "offline"));
     }
 
-    // Get list of access points info
+    // Get list of zeep access points info
     @GetMapping("access-points-zeep")
-    public ResponseEntity<List<device>> getAllAP() {
+    public ResponseEntity<List<device>> getAllZeepAP() {
         return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("zeep"));
     }
 
-    // Get list of access points info
+    // Get list of registered access points info
+    @GetMapping("access-points-registered")
+    public ResponseEntity<List<device>> getAllRegisteredAP() {
+        return ResponseEntity.ok(deviceRepo.getAllRegisteredDevices());
+    }
+
+    // Get list of rogue access points info
     @GetMapping("access-points-rogue")
     public ResponseEntity<List<device>> getAllRogueAP() {
         return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("unassigned"));
