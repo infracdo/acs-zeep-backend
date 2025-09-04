@@ -146,7 +146,6 @@ public class RadiusController {
     @GetMapping("total-bandwidth-consumption-today")
     public ResponseEntity<Map<String, Object>> getTotalBandwidthConsumptionToday() {
         String formattedTotalBandwidth = radiusService.getTotalBandwidthConsumptionToday();
-
         Map<String, Object> response = new HashMap<>();
         response.put("totalBandwidthConsumptionToday", formattedTotalBandwidth);
 

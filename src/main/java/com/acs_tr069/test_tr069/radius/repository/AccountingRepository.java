@@ -84,46 +84,20 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     long countTotalAPs();
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(DISTINCT calling_station_id) " +
-        "FROM accounting " +
-        "WHERE time_stamp >= :startOfDay " +
-        "AND time_stamp < :endOfDay",
-        nativeQuery = true)
-    long countTotalUserConnectionsToday(
-        @Param("startOfDay") long startOfDay,
-        @Param("endOfDay") long endOfDay
-    );
+    @Query(value = "SELECT COUNT(DISTINCT calling_station_id) FROM accounting WHERE time_stamp >= :startOfDay", nativeQuery = true)
+    long countTotalUserConnectionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype IN ('Start', 'Alive') AND time_stamp >= :startOfDay AND time_stamp < :endOfDay", nativeQuery = true)
-    long countTotalSessionsToday(
-        @Param("startOfDay") long startOfDay,
-        @Param("endOfDay") long endOfDay
-    );
+    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype IN ('Start', 'Alive') AND time_stamp >= :startOfDay", nativeQuery = true)
+    long countTotalSessionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total bandwidth consumption for today
-    @Query(value = "SELECT COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) " +
-        "FROM accounting " +
-        "WHERE time_stamp >= :startOfDay " +
-        "AND time_stamp < :endOfDay",
-        nativeQuery = true)
-    long totalBandwidthConsumptionToday(
-        @Param("startOfDay") long startOfDay,
-        @Param("endOfDay") long endOfDay
-    );
+    @Query(value = "SELECT COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) FROM accounting WHERE time_stamp >= :startOfDay", nativeQuery = true)
+    long totalBandwidthConsumptionToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total session time for today
-    @Query(value = "SELECT COALESCE(SUM(acctsessiontime), 0) " +
-        "FROM accounting " +
-        "WHERE acctstatustype = 'Stop' " +
-        "AND acctsessiontime > 0 " +
-        "AND time_stamp >= :startOfDay " +
-        "AND time_stamp < :endOfDay",
-        nativeQuery = true)
-    Double totalSessionTimeToday(
-        @Param("startOfDay") long startOfDay,
-        @Param("endOfDay") long endOfDay
-    );
+    @Query(value = "SELECT COALESCE(SUM(acctsessiontime), 0) FROM accounting WHERE acctstatustype = 'Stop' AND acctsessiontime > 0 AND time_stamp >= :startOfDay", nativeQuery = true)
+    Double totalSessionTimeToday(@Param("startOfDay") long startOfDay);
 
     // Query to get average connection time
     @Query(value = "SELECT AVG(acctsessiontime) " +

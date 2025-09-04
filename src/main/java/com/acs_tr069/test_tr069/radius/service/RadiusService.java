@@ -1,9 +1,9 @@
 package com.acs_tr069.test_tr069.radius.service;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,88 +100,29 @@ public class RadiusService {
         return accountingRepository.countInactiveAPs(startTime);
     }
 
-    private long getTimestampsForTimeframe(String timeframe) {
-        LocalDate today = LocalDate.now();
-        LocalDate startDate;
-
-        switch (timeframe.toLowerCase()) {
-            case "24h":
-                startDate = today.minusDays(1);
-                break;
-            case "7d":
-                startDate = today.minusDays(7);
-                break;
-            case "30d":
-                startDate = today.minusDays(30);
-                break;
-            default:
-                startDate = today.minusDays(1);
-                break;
-        }
-
-        return startDate.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
-    }
-
     // Return the total number of user connections for today
     public Long getCountTotalUserConnectionsToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        return accountingRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
+        long startOfDay = getTimestampsForTimeframe("today");
+        return accountingRepository.countTotalUserConnectionsToday(startOfDay);
     }
 
     // Return the total number of user connections for today
     public Long getCountTotalSessionsToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        return accountingRepository.countTotalSessionsToday(startOfDay, endOfDay);
+        long startOfDay = getTimestampsForTimeframe("today");
+        return accountingRepository.countTotalSessionsToday(startOfDay);
     }
 
     // Return total bandwidth consumption for today
     public String getTotalBandwidthConsumptionToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
-
+        long startOfDay = getTimestampsForTimeframe("today");
+        long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay);
         return formatBytes(totalRawBytes);
     }
 
     // Return total session time for today
     public String getTotalSessionTimeToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        Double totalSeconds = accountingRepository.totalSessionTimeToday(startOfDay, endOfDay);
-
+        long startOfDay = getTimestampsForTimeframe("today");
+        Double totalSeconds = accountingRepository.totalSessionTimeToday(startOfDay);
         return formatDuration(totalSeconds);
     }
 
@@ -330,6 +271,33 @@ public class RadiusService {
 
 
     // HELPER METHODS //
+    private long getTimestampsForTimeframe(String timeframe) {
+        ZoneId manila = ZoneId.of("Asia/Manila");
+        ZonedDateTime now = ZonedDateTime.now(manila);
+
+        ZonedDateTime start;
+
+        switch (timeframe.toLowerCase()) {
+            case "today":
+                start = now.toLocalDate().atStartOfDay(manila);
+                break;
+            case "24h":
+                start = now.minusHours(24);
+                break;
+            case "7d":
+                start = now.minusDays(7);
+                break;
+            case "30d":
+                start = now.minusDays(30);
+                break;
+            default:
+                start = now.minusHours(24);
+                break;
+        }
+
+        long startEpoch = start.toEpochSecond();
+        return startEpoch;
+    }
 
     private String formatDuration(Double seconds) {
         if (seconds == null || seconds == 0) return "0";
