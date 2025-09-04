@@ -36,7 +36,7 @@ public interface device_frontendRepository extends CrudRepository<device, Long>{
    @Query("SELECT d FROM device d WHERE LOWER(d.parent) LIKE %?1% ")
    List<device> getAllDevicesByParent(String keyword);
 
-   @Query("SELECT d FROM device d WHERE LOWER(d.parent) <> 'unassigned'")
-   List<device> getAllRegisteredDevices();
+   @Query("SELECT d FROM device d WHERE LOWER(d.status) ='online' AND LOWER(d.parent) <> 'unassigned'")
+   List<device> getAllOnlineRegisteredDevices();
 
 }
