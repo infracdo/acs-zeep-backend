@@ -44,7 +44,7 @@ public class RadiusController {
 
     // returns number of active users
     @GetMapping("count-active-users")
-    public ResponseEntity<Map<String, Object>> getCountActiveUsers(@RequestParam(required = false, defaultValue = "week") String timeframe) {
+    public ResponseEntity<Map<String, Object>> getCountActiveUsers(@RequestParam(required = false, defaultValue = "7d") String timeframe) {
         long activeUsers = radiusService.getCountActiveUsers(timeframe);
 
         Map<String, Object> response = new HashMap<>();
@@ -55,7 +55,7 @@ public class RadiusController {
 
     // Get number of active users
     @GetMapping("count-inactive-users")
-    public ResponseEntity<Map<String, Object>> getCountInactiveUsers(@RequestParam(required = false, defaultValue = "week") String timeframe) {
+    public ResponseEntity<Map<String, Object>> getCountInactiveUsers(@RequestParam(required = false, defaultValue = "7d") String timeframe) {
         long inactiveUsers = radiusService.getCountInactiveUsers(timeframe);
 
         Map<String, Object> response = new HashMap<>();
@@ -100,7 +100,7 @@ public class RadiusController {
     
     // Get number of current active access points
     @GetMapping("count-active-aps")
-    public ResponseEntity<Map<String, Object>> getCountActiveAPs(@RequestParam(required = false, defaultValue = "week") String timeframe) {
+    public ResponseEntity<Map<String, Object>> getCountActiveAPs(@RequestParam(required = false, defaultValue = "7d") String timeframe) {
         long currentlyActiveAPs = radiusService.getCountActiveAPs(timeframe);
 
         Map<String, Object> response = new HashMap<>();
@@ -111,7 +111,7 @@ public class RadiusController {
     
     // Get number of current inactive access points
     @GetMapping("count-inactive-aps")
-    public ResponseEntity<Map<String, Object>> getCountInactiveAPs(@RequestParam(required = false, defaultValue = "week") String timeframe) {
+    public ResponseEntity<Map<String, Object>> getCountInactiveAPs(@RequestParam(required = false, defaultValue = "7d") String timeframe) {
         long currentlyInactiveAPs = radiusService.getCountInactiveAPs(timeframe);
 
         Map<String, Object> response = new HashMap<>();
