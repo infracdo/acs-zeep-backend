@@ -1247,18 +1247,15 @@ public class testController {
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
         if (!appReady || httplogreqRepo == null || device_front == null) {
-            System.out.println("app not ready, skipped device status update");
             return;
         }
         
         Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); // TODO; create function that joins with device table to reduce db access
-        System.out.println("retrieved device list from httprequestlog");
-        Long offlineThreshold = env.getProperty("device.offline.mins", Long.class, 3L);
-        Long fallbackMs = env.getProperty("device.offline.fallback.ms", Long.class, 300000L);
+        Long offlineThreshold = 3L;
+        Long fallbackMs = 300000L;
         for (httprequestlog httprequestlog : listOfDevices) {
             String serialNumber = httprequestlog.get_SN();
             if (serialNumber == null || serialNumber.isEmpty()) {
-                System.out.println("found no serial number, skipping entry");
                 continue;
             }
 
@@ -1276,11 +1273,9 @@ public class testController {
             if (currentDevice == null) {
                 continue;
             }
-            System.out.println("device status for " + serialNumber + " is currently " + currentDevice.getstatus());
             
             if(!currentDevice.getstatus().contains("syncing")){
                 if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
-                    System.out.println("device " + serialNumber + " last request is over " + offlineThreshold + " minutes ");
                     String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
                     currentDevice.setdate_offline(offlineTime);
                     device_front.save(currentDevice);
@@ -1289,7 +1284,6 @@ public class testController {
                     }
                     if("unassigned".equals(currentDevice.getparent())){
                         device_front.delete(currentDevice);
-                        System.out.println("deleted offline rogue device " + serialNumber);
                     }
                 }
                 else{
@@ -1522,7 +1516,6 @@ public class testController {
             devicestat.setstatus(Status);
         }
         device_front.save(devicestat);
-        System.out.println("device status of " + devicestat.getserial_number() + " is now " + devicestat.getstatus());
     }
   
     private String Tr069ResponseHandler(String Method, String Parameters, String Option){
@@ -1894,7 +1887,6 @@ public class testController {
 
     return result;
 }
-
 
     @RequestMapping(value="/CliAutoComplete/ {SerialNum}")
     public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )

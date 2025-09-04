@@ -1,9 +1,12 @@
 package com.acs_tr069.test_tr069.radius.service;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,88 +103,29 @@ public class RadiusService {
         return accountingRepository.countInactiveAPs(startTime);
     }
 
-    private long getTimestampsForTimeframe(String timeframe) {
-        LocalDate today = LocalDate.now();
-        LocalDate startDate;
-
-        switch (timeframe.toLowerCase()) {
-            case "24h":
-                startDate = today.minusDays(1);
-                break;
-            case "7d":
-                startDate = today.minusDays(7);
-                break;
-            case "30d":
-                startDate = today.minusDays(30);
-                break;
-            default:
-                startDate = today.minusDays(1);
-                break;
-        }
-
-        return startDate.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
-    }
-
     // Return the total number of user connections for today
     public Long getCountTotalUserConnectionsToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        return accountingRepository.countTotalUserConnectionsToday(startOfDay, endOfDay);
+        long startOfDay = getTimestampsForTimeframe("today");
+        return accountingRepository.countTotalUserConnectionsToday(startOfDay);
     }
 
     // Return the total number of user connections for today
     public Long getCountTotalSessionsToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        return accountingRepository.countTotalSessionsToday(startOfDay, endOfDay);
+        long startOfDay = getTimestampsForTimeframe("today");
+        return accountingRepository.countTotalSessionsToday(startOfDay);
     }
 
     // Return total bandwidth consumption for today
     public String getTotalBandwidthConsumptionToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        // NOTE: for testing purposes
-        // long startOfDay = LocalDate.of(2025, 5, 16)
-        //     .atStartOfDay()
-        //     .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay, endOfDay);
-
+        long startOfDay = getTimestampsForTimeframe("today");
+        long totalRawBytes = accountingRepository.totalBandwidthConsumptionToday(startOfDay);
         return formatBytes(totalRawBytes);
     }
 
     // Return total session time for today
     public String getTotalSessionTimeToday() {
-        long startOfDay = LocalDate.now()
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long endOfDay = startOfDay + 86400;
-
-        Double totalSeconds = accountingRepository.totalSessionTimeToday(startOfDay, endOfDay);
-
+        long startOfDay = getTimestampsForTimeframe("today");
+        Double totalSeconds = accountingRepository.totalSessionTimeToday(startOfDay);
         return formatDuration(totalSeconds);
     }
 
@@ -193,18 +137,8 @@ public class RadiusService {
 
     // Return average connection time for the month
     public String getAverageConnectionTimeForMonth() {
-        LocalDate now = LocalDate.now();
-
-        long startOfMonth = now.withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long startOfNextMonth = now.plusMonths(1)
-            .withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        Double avgSeconds = accountingRepository.findAverageConnectionTime(startOfMonth, startOfNextMonth);
+        long startOfMonth = getTimestampsForTimeframe("month");
+        Double avgSeconds = accountingRepository.findAverageConnectionTime(startOfMonth);
         
         if (avgSeconds == null) {
             return "-mins, -s";
@@ -236,20 +170,10 @@ public class RadiusService {
 
     // Return average bandwidth per connection for the month
     public String getAverageBandwidthForMonth() {
-        LocalDate now = LocalDate.now();
+        long startOfMonth = getTimestampsForTimeframe("month");
+        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection(startOfMonth);
 
-        long startOfMonth = now.withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        long startOfNextMonth = now.plusMonths(1)
-            .withDayOfMonth(1)
-            .atStartOfDay()
-            .toEpochSecond(ZoneOffset.UTC);
-
-        Double avgBytesPerSec = accountingRepository.findAverageBandwidthPerConnection(startOfMonth, startOfNextMonth);
-
-        if (avgBytesPerSec == null || avgBytesPerSec <= 0) return "- B/s";
+        if (avgBytesPerSec == null) return "- B/s";
 
         return formatBandwidth(avgBytesPerSec);
     }
@@ -330,6 +254,39 @@ public class RadiusService {
 
 
     // HELPER METHODS //
+    private long getTimestampsForTimeframe(String timeframe) {
+        LocalDateTime now = LocalDateTime.now(); // System time assumed to be UTC
+        LocalDateTime start;
+
+        switch (timeframe.toLowerCase()) {
+            case "today":
+                start = now.toLocalDate().atStartOfDay();
+                break;
+            case "week": // ISO standard: week starts on Monday
+                start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                        .toLocalDate().atStartOfDay();
+                break;
+            case "month":
+                start = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+                break;
+            case "1d":
+                start = now.minusDays(1).toLocalDate().atStartOfDay();
+                break;
+            case "7d":
+                start = now.minusDays(7).toLocalDate().atStartOfDay();
+                break;
+            case "30d":
+                start = now.minusDays(30).toLocalDate().atStartOfDay();
+                break;
+            default:
+                // fallback to 24h from now (exact)
+                return now.minusHours(24).toEpochSecond(ZoneOffset.UTC);
+        }
+
+        long startEpoch = start.toEpochSecond(ZoneOffset.UTC);
+        System.out.println("Generated UTC epoch for \"" + timeframe + "\": " + startEpoch);
+        return startEpoch;
+    }
 
     private String formatDuration(Double seconds) {
         if (seconds == null || seconds == 0) return "0";
