@@ -220,13 +220,13 @@ public class RadiusController {
     // Get list of online access points info
     @GetMapping("access-points-online")
     public ResponseEntity<List<device>> getAllOnlineAP() {
-        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("zeep", "online"));
+        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("", "online"));
     }
 
     // Get list of offline access points info
     @GetMapping("access-points-offline")
     public ResponseEntity<List<device>> getAllOfflineAP() {
-        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("zeep", "offline"));
+        return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("", "offline"));
     }
 
     // Get list of access points info
