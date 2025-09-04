@@ -238,7 +238,7 @@ public class RadiusController {
     // Get list of registered access points info
     @GetMapping("access-points-registered")
     public ResponseEntity<List<device>> getAllRegisteredAP() {
-        return ResponseEntity.ok(deviceRepo.getAllRegisteredDevices());
+        return ResponseEntity.ok(deviceRepo.getAllOnlineRegisteredDevices());
     }
 
     // Get list of rogue access points info
