@@ -15,16 +15,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import javax.persistence.PersistenceException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.soap.SOAPBody;
 import javax.xml.soap.SOAPException;
 
+import org.hibernate.HibernateException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,11 +37,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -1246,52 +1253,71 @@ public class testController {
 
     @Scheduled(fixedRate = 60000)
     private void DeviceStatusUpdate(){
-        if (!appReady || httplogreqRepo == null || device_front == null) {
-            return;
-        }
-        
-        Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); // TODO; create function that joins with device table to reduce db access
-        Long offlineThreshold = 3L;
-        Long fallbackMs = 300000L;
-        for (httprequestlog httprequestlog : listOfDevices) {
-            String serialNumber = httprequestlog.get_SN();
-            if (serialNumber == null || serialNumber.isEmpty()) {
-                continue;
+        try {
+            if (!appReady || httplogreqRepo == null || device_front == null) {
+                return;
             }
-
-            Timestamp lastRequest = httprequestlog.get_lastRequest();
-            Long timeIntervalMs = 0L;
-            if (lastRequest == null) {
-                timeIntervalMs = fallbackMs;
-            } else {
-                timeIntervalMs = System.currentTimeMillis() - lastRequest.getTime();
-            }
+            Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); 
+            List<httprequestlog> logs = StreamSupport.stream(listOfDevices.spliterator(), false).collect(Collectors.toList());
+            Set<String> serialNumbers = logs.stream().map(httprequestlog::get_SN).filter(sn -> sn != null && !sn.isEmpty()).collect(Collectors.toSet());
             
-            Long intervalMin = timeIntervalMs/60000;
-            device currentDevice = device_front.getBySerialNum(serialNumber);
-
-            if (currentDevice == null) {
-                continue;
+            if (serialNumbers.isEmpty()) {
+                return;
             }
-            
-            if(!currentDevice.getstatus().contains("syncing")){
-                if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
-                    String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
-                    currentDevice.setdate_offline(offlineTime);
-                    device_front.save(currentDevice);
-                    if (!"offline".equals(currentDevice.getstatus())) {
-                        UpdateDeviceStatus(serialNumber, "offline");
+            List<device> devices = device_front.findAllBySerialNumbers(serialNumbers);
+            Map<String, device> deviceMap = devices.stream().collect(Collectors.toMap(device::getserial_number, Function.identity()));
+
+            Long offlineThreshold = 3L;
+            Long fallbackMs = 300000L;
+            for (httprequestlog log : logs) {
+                String serialNumber = log.get_SN();
+                if (serialNumber == null || serialNumber.isEmpty()) {
+                    continue;
+                }
+
+                Timestamp lastRequest = log.get_lastRequest();
+                Long timeIntervalMs = 0L;
+                if (lastRequest == null) {
+                    timeIntervalMs = fallbackMs;
+                } else {
+                    timeIntervalMs = System.currentTimeMillis() - lastRequest.getTime();
+                }
+                
+                Long intervalMin = timeIntervalMs/60000;
+                device currentDevice = deviceMap.get(serialNumber);
+
+                if (currentDevice == null) {
+                    continue;
+                }
+                
+                if(!currentDevice.getstatus().contains("syncing")){
+                    if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
+                        String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
+                        currentDevice.setdate_offline(offlineTime);
+                        device_front.save(currentDevice);
+                        if (!"offline".equals(currentDevice.getstatus())) {
+                            UpdateDeviceStatus(serialNumber, "offline");
+                        }
+                        if("unassigned".equals(currentDevice.getparent())){
+                            device_front.delete(currentDevice);
+                        }
                     }
-                    if("unassigned".equals(currentDevice.getparent())){
-                        device_front.delete(currentDevice);
+                    else{
+                        if (!"online".equals(currentDevice.getstatus())) {
+                            UpdateDeviceStatus(serialNumber, "online");
+                        }
                     }
                 }
-                else{
-                    if (!"online".equals(currentDevice.getstatus())) {
-                        UpdateDeviceStatus(serialNumber, "online");
-                    }
-                }
             }
+        } catch (CannotGetJdbcConnectionException e) {
+            e.printStackTrace();
+            System.err.println("Database unreachable during device status update: " + e.getMessage());
+        } catch (DataAccessException | PersistenceException e) {
+            e.printStackTrace();
+            System.err.println("A database error occurred during device status update: " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("An error occurred during device status update: " + e.getMessage());
         }
     }
 
@@ -1469,7 +1495,6 @@ public class testController {
             sb.append("Accept-Language:zh-cn\r\n");
             sb.append("host:localhost\r\n");
             sb.append("Content-Length:0\r\n");
-            
             
             String msg = sb.toString();
             for(int i=0;i<2;i++){
