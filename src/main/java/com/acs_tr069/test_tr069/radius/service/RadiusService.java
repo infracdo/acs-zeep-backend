@@ -252,12 +252,16 @@ public class RadiusService {
 
     // HELPER METHODS //
     private long getTimestampsForTimeframe(String timeframe) {
-        LocalDateTime now = LocalDateTime.now(); // System time assumed to be UTC
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC); // System time assumed to be UTC
+        System.out.println("Current system time (UTC): " + now);
         LocalDateTime start;
 
         switch (timeframe.toLowerCase()) {
             case "today":
                 start = now.toLocalDate().atStartOfDay();
+                break;
+            case "yesterday":
+                start = now.minusDays(1).toLocalDate().atStartOfDay();
                 break;
             case "week": // ISO standard: week starts on Monday
                 start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay();
@@ -265,14 +269,11 @@ public class RadiusService {
             case "month":
                 start = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
                 break;
-            case "1d":
-                start = now.minusDays(1).toLocalDate().atStartOfDay();
-                break;
             case "7d":
-                start = now.minusDays(7).toLocalDate().atStartOfDay();
+                start = now.minusDays(6).toLocalDate().atStartOfDay();
                 break;
             case "30d":
-                start = now.minusDays(30).toLocalDate().atStartOfDay();
+                start = now.minusDays(29).toLocalDate().atStartOfDay();
                 break;
             default:
                 return now.minusHours(24).toEpochSecond(ZoneOffset.UTC);

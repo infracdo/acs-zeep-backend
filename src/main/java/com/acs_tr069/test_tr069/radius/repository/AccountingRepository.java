@@ -74,10 +74,10 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting WHERE called_station_id IS NOT NULL AND called_station_id NOT IN (SELECT DISTINCT called_station_id FROM accounting WHERE time_stamp >= :startOfDay)", nativeQuery = true)
     long countInactiveAPs(@Param("startOfDay") long startOfDay); // APs that have not been used for the last x number of days
 
-    @Query(value = "SELECT COUNT(DISTINCT calling_station_id) FROM accounting WHERE calling_station_id IS NOT NULL AND time_stamp >= :startOfDay", nativeQuery = true)
+    @Query(value = "SELECT COUNT(DISTINCT username) FROM accounting WHERE calling_station_id IS NOT NULL AND time_stamp >= :startOfDay", nativeQuery = true)
     long countActiveUsers(@Param("startOfDay") long startOfDay); // APs that have been used for the last x number of days
 
-    @Query(value = "SELECT COUNT(DISTINCT calling_station_id) FROM accounting WHERE calling_station_id IS NOT NULL AND calling_station_id NOT IN (SELECT DISTINCT calling_station_id FROM accounting WHERE time_stamp >= :startOfDay)", nativeQuery = true)
+    @Query(value = "SELECT COUNT(DISTINCT username) FROM accounting WHERE calling_station_id IS NOT NULL AND calling_station_id NOT IN (SELECT DISTINCT calling_station_id FROM accounting WHERE time_stamp >= :startOfDay)", nativeQuery = true)
     long countInactiveUsers(@Param("startOfDay") long startOfDay); // APs that have not been used for the last x number of days
 
     @Query(value = "SELECT COUNT(DISTINCT called_station_id) FROM accounting a1", nativeQuery = true)
