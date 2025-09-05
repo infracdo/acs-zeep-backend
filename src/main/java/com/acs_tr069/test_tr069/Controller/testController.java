@@ -18,8 +18,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -192,6 +190,7 @@ public class testController {
 
             if (xmlPayload != null) {
                 try {
+                    System.out.println("Received Payload: " + xmlPayload);
                     converteBody = getSoap.StringToSAOP(xmlPayload).getSOAPBody();
                     getResponsetype = converteBody.getChildNodes().item(0).getLocalName();
                 } catch (SOAPException e) {
