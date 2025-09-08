@@ -190,7 +190,6 @@ public class testController {
 
             if (xmlPayload != null) {
                 try {
-                    System.out.println("Received Payload: " + xmlPayload);
                     converteBody = getSoap.StringToSAOP(xmlPayload).getSOAPBody();
                     getResponsetype = converteBody.getChildNodes().item(0).getLocalName();
                 } catch (SOAPException e) {
@@ -438,6 +437,7 @@ public class testController {
                         num_ap = 0;
                         break;
                     } else {
+                        System.out.println("AP Parameters to be deleted: " + result);
                         apTobeDelete = result.split(",", -1);
                         num_ap = apTobeDelete.length - 1;
                         break;
@@ -585,6 +585,7 @@ public class testController {
                     e.printStackTrace();
                 }
                 Integer numOfParam = soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
+                System.out.println("Number of parameters for " + Method + " for device " + serial_num + " is " + numOfParam);
                 if (numOfParam == 0) {
                     return "zero";
                 } else {
