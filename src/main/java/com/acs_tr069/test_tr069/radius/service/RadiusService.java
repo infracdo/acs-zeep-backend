@@ -1,19 +1,26 @@
 package com.acs_tr069.test_tr069.radius.service;
 
+import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
+
 import org.springframework.stereotype.Service;
 
 import com.acs_tr069.test_tr069.radius.entity.Accounting;
 import com.acs_tr069.test_tr069.radius.repository.AccountingRepository;
+import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class RadiusService {
 
@@ -249,6 +256,198 @@ public class RadiusService {
         return response;
     }
 
+    public List<Map<String, Object>> getAllCurrentOnlineUsers(int limit, int offset) {
+        List<Object[]> results = accountingRepository.findAllCurrentOnlineUsers(limit, offset);
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("username", row[0]);
+
+            user.put("total_active_session_count", row[1] != null ? ((Number) row[1]).intValue() : 0);
+
+            Long totalSessionSeconds = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("total_session_duration", formatDuration(totalSessionSeconds.doubleValue()));
+
+            Long bandwidthUsage = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalBandwidthUsage", formatBandwidth(bandwidthUsage));
+
+            response.add(user);
+        }
+        
+        // log.info("getAllCurrentOnlineUsers: {}", response);
+        return response;
+    }
+    
+    public long getCountForAllCurrentOnlineUsers() {
+        return accountingRepository.countAllCurrentOnlineUsers();
+    }
+    
+    public List<Map<String, Object>> getUserSessions(String username) {
+        List<Object[]> results = accountingRepository.findUserSessions(username);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("acctSessionId", row[0]);
+            user.put("username", row[1]);
+            user.put("callingStationId", row[2]);
+            user.put("calledStationId", row[3]);
+            
+            Timestamp startTime = (Timestamp) row[4];
+            if (startTime != null) {
+                long startSeconds = startTime.getTime() / 1000;
+                user.put("startTime", formatRawTimeStamp(startSeconds));
+                
+                long now = System.currentTimeMillis() / 1000;
+                long diffSeconds = now - startSeconds;
+                user.put("duration", formatDuration((double) diffSeconds));
+            } else {
+                user.put("startTime", "-");
+                user.put("duration", "-");
+            }
+
+            Long inputOctets = row[6] != null ? ((Number) row[6]).longValue() : 0;
+            Long outputOctets = row[7] != null ? ((Number) row[7]).longValue() : 0;
+            Long bandwidthUsage = inputOctets + outputOctets;
+            user.put("bandwidthUsage", formatBandwidth(bandwidthUsage));
+            
+            response.add(user);
+        }
+        
+        // log.info("getUserSessions: {}", response);
+        return response;
+    }
+
+    public List<Map<String, Object>> getAllActiveUsersForThePast7Days(int limit, int offset) {
+        List<Object[]> results = accountingRepository.findAllActiveUsersForThePast7Days(limit, offset);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("username", row[0]);
+            
+            user.put("sessionCount", row[1] != null ? ((Number) row[1]).intValue() : 0);
+            
+            Long totalDurationInSeconds = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("totalTime", formatDuration(totalDurationInSeconds.doubleValue()));
+            
+            Long bandwidthUsage = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalBandwidthUsage", formatBandwidth(bandwidthUsage));
+            
+            Long avgSessionLengthInSeconds = row[4] != null ? ((Number) row[4]).longValue() : 0L;
+            user.put("avgSessionLength", formatDuration(avgSessionLengthInSeconds.doubleValue()));
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllActiveUsersForThePast7Days: {}", response);
+        return response;
+    }
+    
+    public long getCountForAllActiveUsersForThePast7Days() {
+        return accountingRepository.countForAllActiveUsersForThePast7Days();
+    }
+    
+    public List<Map<String, Object>> getAllSessionsByUsernameForLast7Days(String username, int limit, int offset) {
+        List<Object[]> results = accountingRepository.findAllSessionsByUsernameForLast7Days(username ,limit, offset);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            // user.put("username", row[0]);
+            
+            user.put("acctSessionId", row[1]);
+            user.put("callingStationId", row[2]);
+            user.put("calledStationId", row[3]);
+            
+
+            Timestamp startTime = (Timestamp) row[4];
+            if (startTime != null) {
+                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
+                user.put("startTime", formattedStartTime);
+                
+                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
+
+                user.put("duration", formatDuration((double) totalDurationInSeconds));
+            } else {
+                user.put("startTime", "-");
+                user.put("duration", "-");
+            }
+            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+            user.put("bandwidthUsage", formatBandwidth(bandwidth));
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllSessionsByUsernameForLast7Days: {}", response);
+        return response;
+    }
+    
+    public List<Map<String, Object>> getAllRegisteredUsersWithSessions(int limit, int offset) {
+        List<Object[]> results = accountingRepository.findAllRegisteredUsersWithSessions(limit, offset);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("username", row[0]);
+            
+            user.put("sessionCount", row[1] != null ? ((Number) row[1]).intValue() : 0);
+            
+            Long totalDurationInSeconds = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("totalTime", formatDuration(totalDurationInSeconds.doubleValue()));
+            
+            Long bandwidthUsage = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalBandwidthUsage", formatBandwidth(bandwidthUsage));
+            
+            Long avgSessionLengthInSeconds = row[4] != null ? ((Number) row[4]).longValue() : 0L;
+            user.put("avgSessionLength", formatDuration(avgSessionLengthInSeconds.doubleValue()));
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllRegisteredUsersWithSessions: {}", response);
+        return response;
+    }
+    
+    public long getCountForAllRegisteredUsersWithSessions() {
+        return accountingRepository.countAllRegisteredUsersWithSessions();
+    }
+    
+    public List<Map<String, Object>> getAllSessionsByUsername(String username, int limit, int offset) {
+        List<Object[]> results = accountingRepository.findAllSessionsByUsername(username ,limit, offset);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            // user.put("username", row[0]);
+            
+            user.put("acctSessionId", row[1]);
+            user.put("callingStationId", row[2]);
+            user.put("calledStationId", row[3]);
+            
+
+            Timestamp startTime = (Timestamp) row[4];
+            if (startTime != null) {
+                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
+                user.put("startTime", formattedStartTime);
+                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
+
+                user.put("duration", formatDuration((double) totalDurationInSeconds));
+            } else {
+                user.put("startTime", "-");
+                user.put("duration", "-");
+            }
+            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+            user.put("bandwidthUsage", formatBandwidth(bandwidth));
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllSessionsByUsername: {}", response);
+        return response;
+    }
+
 
     // HELPER METHODS //
     private long getTimestampsForTimeframe(String timeframe) {
@@ -329,5 +528,10 @@ public class RadiusService {
         }
         return String.format("%.2f %s", bytesPerSec, units[unitIndex]);
     }
-    
+
+    private String formatRawTimeStamp(long epochSeconds){
+        LocalDateTime dateTime = LocalDateTime.ofEpochSecond(epochSeconds, 0, ZoneOffset.UTC);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return dateTime.format(formatter);
+    }
 }
