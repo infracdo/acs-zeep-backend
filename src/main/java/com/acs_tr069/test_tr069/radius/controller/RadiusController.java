@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-// import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +19,9 @@ import com.acs_tr069.test_tr069.Entity.device;
 import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 import com.acs_tr069.test_tr069.radius.service.RadiusService;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/radius/")
 @CrossOrigin("*")
@@ -39,6 +41,7 @@ public class RadiusController {
         Map<String, Object> response = new HashMap<>();
         response.put("countOnlineUsers", currentOnlineUsers);
 
+        log.info("Current Online Users: " + currentOnlineUsers);
         return ResponseEntity.ok(response);
     }
 
@@ -279,5 +282,98 @@ public class RadiusController {
             .collect(Collectors.toList());
 
         return ResponseEntity.ok(usersPerAP);
+    }
+
+    // Get currently connected Users who are active for the past 30mins
+    @GetMapping("online-users")
+    public ResponseEntity<Map<String, Object>> getAllCurrentOnlineUsers(@RequestParam int limit, @RequestParam int offset) {
+        // log.info("Fetching current online user details with limit: {} and offset: {}", limit, offset);
+        List<Map<String, Object>> currentOnlineUsers = radiusService.getAllCurrentOnlineUsers(limit, offset);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentOnlineUsers", currentOnlineUsers);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get All of the User's Sessions Details for the past 30mins
+    @GetMapping("online-users/userSession")
+    public ResponseEntity<Map<String, Object>> getUserSessions(@RequestParam String username) {
+        // log.info("Fetching user session details for username: {}", username);
+        List<Map<String, Object>> userSessions = radiusService.getUserSessions(username);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userSessions", userSessions);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // count all current online users for the past 30mins
+    @GetMapping("online-users/countAll")
+    public ResponseEntity<Map<String, Object>> getCountForAllCurrentOnlineUsers() {
+        long totalCount = radiusService.getCountForAllCurrentOnlineUsers();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get All Active Users with a session for the past 7 days
+    @GetMapping("active-users")
+    public ResponseEntity<Map<String, Object>> getAllActiveUsersForThePast7Days(@RequestParam int limit, @RequestParam int offset) {
+        List<Map<String, Object>> activeUsersForThePast7days = radiusService.getAllActiveUsersForThePast7Days(limit, offset);
+        Map<String, Object> response = new HashMap<>();
+        response.put("activeUsersForThePast7days", activeUsersForThePast7days);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // count All Active Users with a session for the past 7 days
+    @GetMapping("active-users/countAll")
+    public ResponseEntity<Map<String, Object>> getCountForAllActiveUsersForThePast7Days() {
+        long totalCount = radiusService.getCountForAllActiveUsersForThePast7Days();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+    
+    // gett All of the Users Session Details for the past 7 days  - the user must have a session for the past 7days
+    @GetMapping("active-users/userSessions")
+    public ResponseEntity<Map<String, Object>> getAllSessionsByUsernameForLast7Days(@RequestParam String username, @RequestParam int limit, @RequestParam int offset) {
+        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsernameForLast7Days(username, limit, offset);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("userSessions", userSessions);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get All Registered Users with a session
+    @GetMapping("all-users-with-sessions")
+    public ResponseEntity<Map<String, Object>> getAllRegisteredUsersWithSessions(@RequestParam int limit, @RequestParam int offset) {
+        List<Map<String, Object>> allRegisteredUsersWithSessions = radiusService.getAllRegisteredUsersWithSessions(limit, offset);
+        Map<String, Object> response = new HashMap<>();
+        response.put("allRegisteredUsersWithSessions", allRegisteredUsersWithSessions);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // count All Registered Users with a session
+    @GetMapping("all-users-with-sessions/countAll")
+    public ResponseEntity<Map<String, Object>> getCountForAllRegisteredUsersWithSessions() {
+        long totalCount = radiusService.getCountForAllRegisteredUsersWithSessions();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+    
+    // get the Registered Users Session Details
+    @GetMapping("all-users-with-sessions/userSessions")
+    public ResponseEntity<Map<String, Object>> getAllSessionsByUsername(@RequestParam String username, @RequestParam int limit, @RequestParam int offset) {
+        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsername(username, limit, offset);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("userSessions", userSessions);
+        
+        return ResponseEntity.ok(response);
     }
 }
