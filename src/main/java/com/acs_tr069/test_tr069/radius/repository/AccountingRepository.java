@@ -462,7 +462,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "        MAX(a.acctinputoctets) AS latest_input, " +
         "        MAX(a.acctoutputoctets) AS latest_output " +
         "    FROM accounting a " +
-        "      AND a.username = :username " +
+        "    WHERE a.username = :username " +
         "    GROUP BY a.username, a.acctsessionid, a.calling_station_id, a.called_station_id " +
         ") " +
         "SELECT " +
