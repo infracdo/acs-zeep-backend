@@ -3,6 +3,7 @@ package com.acs_tr069.test_tr069.radius.service;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
@@ -256,8 +257,8 @@ public class RadiusService {
         return response;
     }
 
-    public List<Map<String, Object>> getAllCurrentOnlineUsers(int limit, int offset) {
-        List<Object[]> results = accountingRepository.findAllCurrentOnlineUsers(limit, offset);
+    public List<Map<String, Object>> getAllCurrentOnlineUsers() {
+        List<Object[]> results = accountingRepository.findAllCurrentOnlineUsers();
         List<Map<String, Object>> response = new ArrayList<>();
 
         for (Object[] row : results) {
@@ -283,8 +284,8 @@ public class RadiusService {
         return accountingRepository.countAllCurrentOnlineUsers();
     }
     
-    public List<Map<String, Object>> getUserSessions(String username) {
-        List<Object[]> results = accountingRepository.findUserSessions(username);
+    public List<Map<String, Object>> getAllSessionsByUsernameForCurrentOnlineUsers(String username) {
+        List<Object[]> results = accountingRepository.findAllSessionsByUsernameForCurrentOnlineUsers(username);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -315,12 +316,12 @@ public class RadiusService {
             response.add(user);
         }
         
-        // log.info("getUserSessions: {}", response);
+        // log.info("getAllSessionsByUsernameForCurrentOnlineUsers: {}", response);
         return response;
     }
 
-    public List<Map<String, Object>> getAllActiveUsersForThePast7Days(int limit, int offset) {
-        List<Object[]> results = accountingRepository.findAllActiveUsersForThePast7Days(limit, offset);
+    public List<Map<String, Object>> getAllActiveUsersForThePast7Days() {
+        List<Object[]> results = accountingRepository.findAllActiveUsersForThePast7Days();
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -349,8 +350,8 @@ public class RadiusService {
         return accountingRepository.countForAllActiveUsersForThePast7Days();
     }
     
-    public List<Map<String, Object>> getAllSessionsByUsernameForLast7Days(String username, int limit, int offset) {
-        List<Object[]> results = accountingRepository.findAllSessionsByUsernameForLast7Days(username ,limit, offset);
+    public List<Map<String, Object>> getAllSessionsByUsernameForThePast7Days(String username) {
+        List<Object[]> results = accountingRepository.findAllSessionsByUsernameForThePast7Days(username);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -380,12 +381,12 @@ public class RadiusService {
             response.add(user);
         }
         
-        // log.info("getAllSessionsByUsernameForLast7Days: {}", response);
+        // log.info("getAllSessionsByUsernameForThePast7Days: {}", response);
         return response;
     }
     
-    public List<Map<String, Object>> getAllRegisteredUsersWithSessions(int limit, int offset) {
-        List<Object[]> results = accountingRepository.findAllRegisteredUsersWithSessions(limit, offset);
+    public List<Map<String, Object>> getAllRegisteredUsersWithSessions() {
+        List<Object[]> results = accountingRepository.findAllRegisteredUsersWithSessions();
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -414,8 +415,8 @@ public class RadiusService {
         return accountingRepository.countAllRegisteredUsersWithSessions();
     }
     
-    public List<Map<String, Object>> getAllSessionsByUsername(String username, int limit, int offset) {
-        List<Object[]> results = accountingRepository.findAllSessionsByUsername(username ,limit, offset);
+    public List<Map<String, Object>> getAllSessionsByUsername(String username) {
+        List<Object[]> results = accountingRepository.findAllSessionsByUsername(username);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -448,7 +449,223 @@ public class RadiusService {
         return response;
     }
 
+    public long getCountForAllCurrentOnlineApForThePast30Mins() {
+        return accountingRepository.countAllCurrentOnlineApForThePast30Mins();
+    }
 
+    public List<Map<String, Object>> getAllCurrentOnlineApForThePast30Mins() {
+        List<Object[]> results = accountingRepository.findAllCurrentOnlineApForThePast30Mins();
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            user.put("calledStationId", row[0]);
+            user.put("totalSessions", row[1]);
+            Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
+                        
+            Timestamp ts = (Timestamp) row[4];
+            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
+            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            LocalDateTime plusOne = local.plusHours(1);
+            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
+            String formatted = start + " - " + end;
+            user.put("peakHour", formatted);
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllCurrentOnlineApForTheLast30Mins: {}", response);
+        return response;
+    }
+
+    public List<Map<String, Object>> getCurrentOnlineApForThePast30MinsByApId(String apId) {
+        List<Object[]> results = accountingRepository.findCurrentOnlineApForThePast30MinsByApId(apId);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            // user.put("calledStationId", row[0]);
+            user.put("userName", row[1]);
+            user.put("totalSessions", row[2]);
+
+            Long totalTimeInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalTime", formatDuration((double) totalTimeInSeconds));
+
+            Long bandwidth = row[4] != null ? ((Number) row[4]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionLengthInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
+            user.put("avgSessionLength", formatDuration((double) avgSessionLengthInSeconds));
+            
+            response.add(user);
+        }
+        
+        // log.info("getAllCurrentOnlineApForTheLast30Mins: {}", response);
+        return response;
+    }
+
+    public List<Map<String, Object>> getSessionForCurrentOnlineUsersByUsernameAndApId(String apId, String username) {
+        List<Object[]> results = accountingRepository.findSessionForCurrentOnlineUsersByUsernameAndApId(apId, username);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            // user.put("username", row[0]);
+            
+            user.put("acctSessionId", row[1]);
+            user.put("callingStationId", row[2]);
+            user.put("calledStationId", row[3]);
+            
+
+            Timestamp startTime = (Timestamp) row[4];
+            if (startTime != null) {
+                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
+                user.put("startTime", formattedStartTime);
+                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
+
+                user.put("duration", formatDuration((double) totalDurationInSeconds));
+            } else {
+                user.put("startTime", "-");
+                user.put("duration", "-");
+            }
+            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+            user.put("bandwidthUsage", formatBandwidth(bandwidth));
+            
+            response.add(user);
+        }
+        
+        // log.info("getSessionForCurrentOnlineUsersByUsernameAndApId: {}", response);
+        return response;
+    }
+
+    public long getCountForAllActiveApForThePast7Days() {
+        return accountingRepository.countAllActiveApForThePast7Days();
+    }
+
+    public List<Map<String, Object>> getAllActiveApForThePast7Days() {
+        List<Object[]> results = accountingRepository.findAllActiveApForThePast7Days();
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            user.put("calledStationId", row[0]);
+            user.put("totalSessions", row[1]);
+            Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
+
+            Timestamp ts = (Timestamp) row[4];
+            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
+            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            LocalDateTime plusOne = local.plusHours(1);
+            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
+            String formatted = start + " - " + end;
+            user.put("peakHour", formatted);
+
+            response.add(user);
+        }
+        
+        // log.info("getAllActiveApForTheLast7Days: {}", response);
+        return response;
+    }
+    
+    public List<Map<String, Object>> getAllActiveApForThePast7DaysByApId(String apId) {
+        List<Object[]> results = accountingRepository.findAllActiveApForThePast7DaysByApId(apId);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            // user.put("calledStationId", row[0]);
+            user.put("userName", row[1]);
+            user.put("totalSessions", row[2]);
+            
+            Long totalTimeInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalTime", formatDuration((double) totalTimeInSeconds));
+
+            Long bandwidth = row[4] != null ? ((Number) row[4]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionLengthInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
+            user.put("avgSessionLength", formatDuration((double) avgSessionLengthInSeconds));
+
+            response.add(user);
+        }
+        
+        // log.info("getAllActiveApForThePast7DaysByApId: {}", response);
+        return response;
+    }
+    
+    public long getCountForAllInActiveApForMoreThan7Days() {
+        return accountingRepository.countAllInActiveApForMoreThan7Days();
+    }
+
+    public List<Map<String, Object>> getAllInActiveApForMoreThan7Days() {
+        List<Object[]> results = accountingRepository.findAllInActiveApForMoreThan7Days();
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            user.put("calledStationId", row[0]);
+            user.put("totalSessions", row[1]);
+            Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
+
+            Timestamp ts = (Timestamp) row[4];
+            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
+            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            LocalDateTime plusOne = local.plusHours(1);
+            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
+            String formatted = start + " - " + end;
+            user.put("peakHour", formatted);
+
+            response.add(user);
+        }
+        
+        // log.info("getAllInactiveApForMoreThan7Days: {}", response);
+        return response;
+    }
+
+    public List<Map<String, Object>> getAllInActiveApForThePast7DaysByApId(String apId) {
+        List<Object[]> results = accountingRepository.findAllInActiveApForThePast7DaysByApId(apId);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> user = new HashMap<>();
+            
+            // user.put("calledStationId", row[0]);
+            user.put("userName", row[1]);
+            user.put("totalSessions", row[2]);
+            
+            Long totalTimeInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            user.put("totalTime", formatDuration((double) totalTimeInSeconds));
+
+            Long bandwidth = row[4] != null ? ((Number) row[4]).longValue() : 0L;
+            user.put("totalBandwidth", formatBandwidth(bandwidth));
+            
+            Long avgSessionLengthInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
+            user.put("avgSessionLength", formatDuration((double) avgSessionLengthInSeconds));
+
+            response.add(user);
+        }
+        
+        // log.info("getAllInActiveApForTheLast7DaysByApId: {}", response);
+        return response;
+    }
+    
     // HELPER METHODS //
     private long getTimestampsForTimeframe(String timeframe) {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC); // System time assumed to be UTC

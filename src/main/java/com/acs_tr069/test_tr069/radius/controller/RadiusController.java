@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -284,11 +285,10 @@ public class RadiusController {
         return ResponseEntity.ok(usersPerAP);
     }
 
-    // Get currently connected Users who are active for the past 30mins
-    @GetMapping("online-users")
-    public ResponseEntity<Map<String, Object>> getAllCurrentOnlineUsers(@RequestParam int limit, @RequestParam int offset) {
-        // log.info("Fetching current online user details with limit: {} and offset: {}", limit, offset);
-        List<Map<String, Object>> currentOnlineUsers = radiusService.getAllCurrentOnlineUsers(limit, offset);
+    // Get currently connected Users who are active for the past 30mins - timestamp should be within the past 30mins
+    @GetMapping("users/online")
+    public ResponseEntity<Map<String, Object>> getAllCurrentOnlineUsers() {
+        List<Map<String, Object>> currentOnlineUsers = radiusService.getAllCurrentOnlineUsers();
         
         Map<String, Object> response = new HashMap<>();
         response.put("currentOnlineUsers", currentOnlineUsers);
@@ -297,10 +297,10 @@ public class RadiusController {
     }
     
     // Get All of the User's Sessions Details for the past 30mins
-    @GetMapping("online-users/userSession")
-    public ResponseEntity<Map<String, Object>> getUserSessions(@RequestParam String username) {
+    @GetMapping("users/online/{username}/sessions")
+    public ResponseEntity<Map<String, Object>> getAllSessionsByUsernameForCurrentOnlineUsers(@PathVariable String username) {
         // log.info("Fetching user session details for username: {}", username);
-        List<Map<String, Object>> userSessions = radiusService.getUserSessions(username);
+        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsernameForCurrentOnlineUsers(username);
 
         Map<String, Object> response = new HashMap<>();
         response.put("userSessions", userSessions);
@@ -308,8 +308,8 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
     
-    // count all current online users for the past 30mins
-    @GetMapping("online-users/countAll")
+    // count all current online users for the past 30mins - the timestamp should be within the past 30mins
+    @GetMapping("users/online/count")
     public ResponseEntity<Map<String, Object>> getCountForAllCurrentOnlineUsers() {
         long totalCount = radiusService.getCountForAllCurrentOnlineUsers();
         Map<String, Object> response = new HashMap<>();
@@ -317,10 +317,10 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
     
-    // Get All Active Users with a session for the past 7 days
-    @GetMapping("active-users")
-    public ResponseEntity<Map<String, Object>> getAllActiveUsersForThePast7Days(@RequestParam int limit, @RequestParam int offset) {
-        List<Map<String, Object>> activeUsersForThePast7days = radiusService.getAllActiveUsersForThePast7Days(limit, offset);
+    // Get list of All Active Users with a session for the past 7 days
+    @GetMapping("users/active")
+    public ResponseEntity<Map<String, Object>> getAllActiveUsersForThePast7Days() {
+        List<Map<String, Object>> activeUsersForThePast7days = radiusService.getAllActiveUsersForThePast7Days();
         Map<String, Object> response = new HashMap<>();
         response.put("activeUsersForThePast7days", activeUsersForThePast7days);
         
@@ -328,7 +328,7 @@ public class RadiusController {
     }
     
     // count All Active Users with a session for the past 7 days
-    @GetMapping("active-users/countAll")
+    @GetMapping("users/active/count")
     public ResponseEntity<Map<String, Object>> getCountForAllActiveUsersForThePast7Days() {
         long totalCount = radiusService.getCountForAllActiveUsersForThePast7Days();
         Map<String, Object> response = new HashMap<>();
@@ -337,9 +337,9 @@ public class RadiusController {
     }
     
     // gett All of the Users Session Details for the past 7 days  - the user must have a session for the past 7days
-    @GetMapping("active-users/userSessions")
-    public ResponseEntity<Map<String, Object>> getAllSessionsByUsernameForLast7Days(@RequestParam String username, @RequestParam int limit, @RequestParam int offset) {
-        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsernameForLast7Days(username, limit, offset);
+    @GetMapping("users/active/{username}/sessions")
+    public ResponseEntity<Map<String, Object>> getAllSessionsByUsernameForThePast7Days(@PathVariable String username) {
+        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsernameForThePast7Days(username);
         
         Map<String, Object> response = new HashMap<>();
         response.put("userSessions", userSessions);
@@ -348,9 +348,9 @@ public class RadiusController {
     }
     
     // Get All Registered Users with a session
-    @GetMapping("all-users-with-sessions")
-    public ResponseEntity<Map<String, Object>> getAllRegisteredUsersWithSessions(@RequestParam int limit, @RequestParam int offset) {
-        List<Map<String, Object>> allRegisteredUsersWithSessions = radiusService.getAllRegisteredUsersWithSessions(limit, offset);
+    @GetMapping("users/registered")
+    public ResponseEntity<Map<String, Object>> getAllRegisteredUsersWithSessions() {
+        List<Map<String, Object>> allRegisteredUsersWithSessions = radiusService.getAllRegisteredUsersWithSessions();
         Map<String, Object> response = new HashMap<>();
         response.put("allRegisteredUsersWithSessions", allRegisteredUsersWithSessions);
         
@@ -358,7 +358,7 @@ public class RadiusController {
     }
     
     // count All Registered Users with a session
-    @GetMapping("all-users-with-sessions/countAll")
+    @GetMapping("users/registered/count")
     public ResponseEntity<Map<String, Object>> getCountForAllRegisteredUsersWithSessions() {
         long totalCount = radiusService.getCountForAllRegisteredUsersWithSessions();
         Map<String, Object> response = new HashMap<>();
@@ -366,14 +366,119 @@ public class RadiusController {
         return ResponseEntity.ok(response);
     }
     
-    // get the Registered Users Session Details
-    @GetMapping("all-users-with-sessions/userSessions")
-    public ResponseEntity<Map<String, Object>> getAllSessionsByUsername(@RequestParam String username, @RequestParam int limit, @RequestParam int offset) {
-        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsername(username, limit, offset);
+    // get the Registered Users Session Details by username - the user must have a session
+    @GetMapping("users/registered/{username}/sessions")
+    public ResponseEntity<Map<String, Object>> getAllSessionsByUsername(@PathVariable String username) {
+        List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsername(username);
         
         Map<String, Object> response = new HashMap<>();
         response.put("userSessions", userSessions);
         
         return ResponseEntity.ok(response);
     }
+
+    // get count for current online aps for the past 30mins - the timestamp should be within the past 30mins
+    @GetMapping("ap/online/count")
+    public ResponseEntity<Map<String, Object>> getCountForAllCurrentOnlineApForThePast30Mins() {
+        long totalCount = radiusService.getCountForAllCurrentOnlineApForThePast30Mins();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+    
+    //get list of all current online aps for the past 30mins - the timestamp should be within the past 30mins
+    @GetMapping("ap/online")
+    public ResponseEntity<Map<String, Object>> getAllCurrentOnlineApForThePast30Mins() {
+        List<Map<String, Object>> currentOnlineAp = radiusService.getAllCurrentOnlineApForThePast30Mins();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentOnlineAp", currentOnlineAp);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    //get users list for current online users by ap id for the past 30mins - the same as current online users but filtered by ap id
+    @GetMapping("ap/online/{apId}/users")
+    public ResponseEntity<Map<String, Object>> getCurrentOnlineApForThePast30MinsByApId(@PathVariable String apId) {
+        List<Map<String, Object>> currentOnlineApByApId = radiusService.getCurrentOnlineApForThePast30MinsByApId(apId);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentOnlineApByApId", currentOnlineApByApId);
+        // log.info("Response: {}", response);
+        return ResponseEntity.ok(response);
+    }
+    
+    // get user session details for current online users by ap id and username for the past 30mins - the same as "current online users" but filtered by ap id and username
+    @GetMapping("ap/online/{apId}/{username}/session")
+    public ResponseEntity<Map<String, Object>> getSessionForCurrentOnlineUsersByUsernameAndApId(@PathVariable String apId, @PathVariable String username) {
+        List<Map<String, Object>> currentOnlineApByUserAndApId = radiusService.getSessionForCurrentOnlineUsersByUsernameAndApId(apId, username);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentOnlineApByUserAndApId", currentOnlineApByUserAndApId);
+        // log.info("Response: {}", response);
+        return ResponseEntity.ok(response);
+    }
+
+    // get all count for active aps that is active for the past 7 days - the timestamp should be within the past 7days
+    @GetMapping("ap/active/count")
+    public ResponseEntity<Map<String, Object>> getCountForAllActiveApForThePast7Days() {
+        long totalCount = radiusService.getCountForAllActiveApForThePast7Days();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+
+    // get list of active aps that is active for the past 7 days - the timestamp should be within the past 7days
+    @GetMapping("ap/active")
+    public ResponseEntity<Map<String, Object>> getAllActiveApForThePast7Days() {
+        List<Map<String, Object>> activeAp = radiusService.getAllActiveApForThePast7Days();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("activeAp", activeAp);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    // get all user session details that is active for the past 7 days by apId/calledStationId - the timestamp should be within the past 7days
+    @GetMapping("ap/active/{apId}/users")
+    public ResponseEntity<Map<String, Object>> getAllActiveApForThePast7DaysByApId(@PathVariable String apId) {
+        List<Map<String, Object>> activeApByApId = radiusService.getAllActiveApForThePast7DaysByApId(apId);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("activeApByApId", activeApByApId);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    //get count of all inactive aps that is more than 7 days - the timestamp should be more than past 7days
+    @GetMapping("ap/in-active/count")
+    public ResponseEntity<Map<String, Object>> getCountForAllInActiveApForMoreThan7Days() {
+        long totalCount = radiusService.getCountForAllInActiveApForMoreThan7Days();
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCount", totalCount);
+        return ResponseEntity.ok(response);
+    }
+
+    //get list of inactive aps that is more than 7 days - the timestamp should be more than past 7days - basically the opposite of active aps
+    @GetMapping("ap/in-active")
+    public ResponseEntity<Map<String, Object>> getAllInActiveApForMoreThan7Days() {
+        List<Map<String, Object>> activeAp = radiusService.getAllInActiveApForMoreThan7Days();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("inActiveAp", activeAp);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    //get all inactive aps that is more than 7 days by ap id - the timestamp should be more than past 7days
+    @GetMapping("ap/in-active/{apId}/users")
+    public ResponseEntity<Map<String, Object>> getAllInActiveApForThePast7DaysByApId(@PathVariable String apId) {
+        List<Map<String, Object>> activeApByApId = radiusService.getAllInActiveApForThePast7DaysByApId(apId);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("inActiveAp", activeApByApId);
+        
+        return ResponseEntity.ok(response);
+    }
+
 }
