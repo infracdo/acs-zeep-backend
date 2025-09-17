@@ -69,4 +69,6 @@ public class Accounting {
     @Column(name = "calling_station_id")
     private String callingStationId;
 
+    @Column(name = "start_time")
+    private Long startTime;
 }
