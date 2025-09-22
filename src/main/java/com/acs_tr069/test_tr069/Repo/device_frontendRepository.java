@@ -1,7 +1,9 @@
 package com.acs_tr069.test_tr069.Repo;
 
-import org.springframework.data.jpa.repository.Query;
+import java.util.List;
+import java.util.Set;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 //import org.springframework.stereotype.Repository;
@@ -9,10 +11,6 @@ import org.springframework.data.repository.query.Param;
 //import org.springframework.data.repository.PagingAndSortingRepository;
 //import net.bytebuddy.dynamic.DynamicType.Builder.FieldDefinition.Optional;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.acs_tr069.test_tr069.Entity.device;
 
@@ -43,4 +41,9 @@ public interface device_frontendRepository extends CrudRepository<device, Long>{
    @Query("SELECT d FROM device d WHERE LOWER(d.status) ='online' AND LOWER(d.parent) <> 'unassigned'")
    List<device> getAllOnlineRegisteredDevices();
 
+   @Query("SELECT d FROM device d WHERE LOWER(d.parent) <> 'unassigned'")
+   List<device> getAllRegisteredDevices();
+
+   @Query("SELECT d FROM device d WHERE LOWER(d.status) = 'offline' AND mac_address = :apId")
+   List<device> getRegisteredDevicesByApId(String apId);
 }

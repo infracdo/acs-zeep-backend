@@ -1313,10 +1313,10 @@ public class testController {
                 
                 if(!currentDevice.getstatus().contains("syncing")){
                     if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
-                        String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
-                        currentDevice.setdate_offline(offlineTime);
-                        device_front.save(currentDevice);
                         if (!"offline".equals(currentDevice.getstatus())) {
+                            String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
+                            currentDevice.setdate_offline(offlineTime);
+                            device_front.save(currentDevice);
                             UpdateDeviceStatus(serialNumber, "offline");
                         }
                         if("unassigned".equals(currentDevice.getparent())){

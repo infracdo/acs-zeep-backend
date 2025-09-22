@@ -3,15 +3,16 @@ package com.acs_tr069.test_tr069.radius.service;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -265,10 +266,10 @@ public class RadiusService {
             Map<String, Object> user = new HashMap<>();
             user.put("username", row[0]);
 
-            user.put("total_active_session_count", row[1] != null ? ((Number) row[1]).intValue() : 0);
+            user.put("totalActiveSessionCount", row[1] != null ? ((Number) row[1]).intValue() : 0);
 
             Long totalSessionSeconds = row[2] != null ? ((Number) row[2]).longValue() : 0L;
-            user.put("total_session_duration", formatDuration(totalSessionSeconds.doubleValue()));
+            user.put("totalSessionDuration", formatDuration(totalSessionSeconds.doubleValue()));
 
             Long bandwidthUsage = row[3] != null ? ((Number) row[3]).longValue() : 0L;
             user.put("totalBandwidthUsage", formatBandwidth(bandwidthUsage));
@@ -299,18 +300,14 @@ public class RadiusService {
             if (startTime != null) {
                 long startSeconds = startTime.getTime() / 1000;
                 user.put("startTime", formatRawTimeStamp(startSeconds));
-                
-                long now = System.currentTimeMillis() / 1000;
-                long diffSeconds = now - startSeconds;
-                user.put("duration", formatDuration((double) diffSeconds));
             } else {
                 user.put("startTime", "-");
-                user.put("duration", "-");
             }
+            
+            Long durationSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0;
+            user.put("duration", formatRawTimeStamp(durationSeconds));
 
-            Long inputOctets = row[6] != null ? ((Number) row[6]).longValue() : 0;
-            Long outputOctets = row[7] != null ? ((Number) row[7]).longValue() : 0;
-            Long bandwidthUsage = inputOctets + outputOctets;
+            Long bandwidthUsage = row[6] != null ? ((Number) row[6]).longValue() : 0;
             user.put("bandwidthUsage", formatBandwidth(bandwidthUsage));
             
             response.add(user);
@@ -356,26 +353,24 @@ public class RadiusService {
         
         for (Object[] row : results) {
             Map<String, Object> user = new HashMap<>();
-            // user.put("username", row[0]);
             
-            user.put("acctSessionId", row[1]);
-            user.put("callingStationId", row[2]);
-            user.put("calledStationId", row[3]);
+            user.put("acctSessionId", row[0]);
+            user.put("callingStationId", row[1]);
+            user.put("calledStationId", row[2]);
             
 
-            Timestamp startTime = (Timestamp) row[4];
+            Timestamp startTime = (Timestamp) row[3];
             if (startTime != null) {
                 String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
                 user.put("startTime", formattedStartTime);
-                
-                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
-
-                user.put("duration", formatDuration((double) totalDurationInSeconds));
             } else {
                 user.put("startTime", "-");
-                user.put("duration", "-");
             }
-            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+
+            Long durationSeconds = row[4] != null ? ((Number) row[4]).longValue() : 0;
+            user.put("duration", formatDuration((double) durationSeconds));
+
+            Long bandwidth = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
             
             response.add(user);
@@ -423,23 +418,22 @@ public class RadiusService {
             Map<String, Object> user = new HashMap<>();
             // user.put("username", row[0]);
             
-            user.put("acctSessionId", row[1]);
-            user.put("callingStationId", row[2]);
-            user.put("calledStationId", row[3]);
-            
+            user.put("acctSessionId", row[0]);
+            user.put("callingStationId", row[1]);
+            user.put("calledStationId", row[2]);
 
-            Timestamp startTime = (Timestamp) row[4];
+            Timestamp startTime = (Timestamp) row[3];
             if (startTime != null) {
                 String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
                 user.put("startTime", formattedStartTime);
-                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
-
-                user.put("duration", formatDuration((double) totalDurationInSeconds));
             } else {
                 user.put("startTime", "-");
-                user.put("duration", "-");
             }
-            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+
+            Long durationSeconds = row[4] != null ? ((Number) row[4]).longValue() : 0;
+            user.put("duration", formatDuration((double) durationSeconds));
+            
+            Long bandwidth = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
             
             response.add(user);
@@ -455,30 +449,44 @@ public class RadiusService {
 
     public List<Map<String, Object>> getAllCurrentOnlineApForThePast30Mins() {
         List<Object[]> results = accountingRepository.findAllCurrentOnlineApForThePast30Mins();
+        List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
+
+        List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
+
+        Map<String, List<Object[]>> sessionsByAp = new HashMap<>();
+        for (Object[] row : allSessions) {
+            String apId = (String) row[0];
+            sessionsByAp.computeIfAbsent(apId, k -> new ArrayList<>()).add(row);
+        }
+
         List<Map<String, Object>> response = new ArrayList<>();
-        
         for (Object[] row : results) {
             Map<String, Object> user = new HashMap<>();
-            
-            user.put("calledStationId", row[0]);
+
+            String apId = (String) row[0];
+            user.put("calledStationId", apId);
             user.put("totalSessions", row[1]);
+
             Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
             user.put("totalBandwidth", formatBandwidth(bandwidth));
-            
+
             Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
             user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
-                        
-            Timestamp ts = (Timestamp) row[4];
-            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
-            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            LocalDateTime plusOne = local.plusHours(1);
-            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
-            String formatted = start + " - " + end;
-            user.put("peakHour", formatted);
-            
+
+            List<Object[]> sessions = sessionsByAp.get(apId);
+            LocalDateTime peakHour = calculatePeakHourForAp(sessions);
+
+            String formattedPeakHour;
+            if (peakHour != null) {
+                formattedPeakHour = peakHour.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + " - " + peakHour.plusHours(1).format(DateTimeFormatter.ofPattern("HH:mm"));
+            } else {
+                formattedPeakHour = "N/A";
+            }
+            user.put("peakHour", formattedPeakHour);
+
             response.add(user);
         }
-        
+
         // log.info("getAllCurrentOnlineApForTheLast30Mins: {}", response);
         return response;
     }
@@ -521,19 +529,18 @@ public class RadiusService {
             user.put("acctSessionId", row[1]);
             user.put("callingStationId", row[2]);
             user.put("calledStationId", row[3]);
-            
 
             Timestamp startTime = (Timestamp) row[4];
             if (startTime != null) {
                 String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
                 user.put("startTime", formattedStartTime);
-                Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
-
-                user.put("duration", formatDuration((double) totalDurationInSeconds));
             } else {
                 user.put("startTime", "-");
-                user.put("duration", "-");
             }
+
+            Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
+            user.put("duration", formatDuration((double) totalDurationInSeconds));
+
             Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
             
@@ -550,12 +557,22 @@ public class RadiusService {
 
     public List<Map<String, Object>> getAllActiveApForThePast7Days() {
         List<Object[]> results = accountingRepository.findAllActiveApForThePast7Days();
+        List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
+
+        List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
+
+        Map<String, List<Object[]>> sessionsByAp = new HashMap<>();
+        for (Object[] row : allSessions) {
+            String apId = (String) row[0];
+            sessionsByAp.computeIfAbsent(apId, k -> new ArrayList<>()).add(row);
+        }
+
         List<Map<String, Object>> response = new ArrayList<>();
-        
         for (Object[] row : results) {
             Map<String, Object> user = new HashMap<>();
             
-            user.put("calledStationId", row[0]);
+            String apId = (String) row[0];
+            user.put("calledStationId", apId);
             user.put("totalSessions", row[1]);
             Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
             user.put("totalBandwidth", formatBandwidth(bandwidth));
@@ -563,13 +580,16 @@ public class RadiusService {
             Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
             user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
 
-            Timestamp ts = (Timestamp) row[4];
-            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
-            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            LocalDateTime plusOne = local.plusHours(1);
-            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
-            String formatted = start + " - " + end;
-            user.put("peakHour", formatted);
+            List<Object[]> sessions = sessionsByAp.get(apId);
+            LocalDateTime peakHour = calculatePeakHourForAp(sessions);
+
+            String formattedPeakHour;
+            if (peakHour != null) {
+                formattedPeakHour = peakHour.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + " - " + peakHour.plusHours(1).format(DateTimeFormatter.ofPattern("HH:mm"));
+            } else {
+                formattedPeakHour = "N/A";
+            }
+            user.put("peakHour", formattedPeakHour);
 
             response.add(user);
         }
@@ -611,12 +631,23 @@ public class RadiusService {
 
     public List<Map<String, Object>> getAllInActiveApForMoreThan7Days() {
         List<Object[]> results = accountingRepository.findAllInActiveApForMoreThan7Days();
-        List<Map<String, Object>> response = new ArrayList<>();
+        List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
         
+        List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
+        
+        Map<String, List<Object[]>> sessionsByAp = new HashMap<>();
+        for (Object[] row : allSessions) {
+            String apId = (String) row[0];
+            sessionsByAp.computeIfAbsent(apId, k -> new ArrayList<>()).add(row);
+        }
+        
+        List<Map<String, Object>> response = new ArrayList<>();
         for (Object[] row : results) {
             Map<String, Object> user = new HashMap<>();
             
-            user.put("calledStationId", row[0]);
+            String apId = (String) row[0];
+            user.put("calledStationId", apId);
+
             user.put("totalSessions", row[1]);
             Long bandwidth = row[2] != null ? ((Number) row[2]).longValue() : 0L;
             user.put("totalBandwidth", formatBandwidth(bandwidth));
@@ -624,13 +655,16 @@ public class RadiusService {
             Long avgSessionDurationInSeconds = row[3] != null ? ((Number) row[3]).longValue() : 0L;
             user.put("avgSessionDuration", formatDuration((double) avgSessionDurationInSeconds));
 
-            Timestamp ts = (Timestamp) row[4];
-            LocalDateTime local = LocalDateTime.ofInstant(ts.toInstant(), ZoneId.of("Asia/Manila"));
-            String start = local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            LocalDateTime plusOne = local.plusHours(1);
-            String end = plusOne.format(DateTimeFormatter.ofPattern("HH:mm"));
-            String formatted = start + " - " + end;
-            user.put("peakHour", formatted);
+            List<Object[]> sessions = sessionsByAp.get(apId);
+            LocalDateTime peakHour = calculatePeakHourForAp(sessions);
+
+            String formattedPeakHour;
+            if (peakHour != null) {
+                formattedPeakHour = peakHour.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + " - " + peakHour.plusHours(1).format(DateTimeFormatter.ofPattern("HH:mm"));
+            } else {
+                formattedPeakHour = "N/A";
+            }
+            user.put("peakHour", formattedPeakHour);
 
             response.add(user);
         }
@@ -750,5 +784,33 @@ public class RadiusService {
         LocalDateTime dateTime = LocalDateTime.ofEpochSecond(epochSeconds, 0, ZoneOffset.UTC);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return dateTime.format(formatter);
+    }
+    
+    //calculates Peak hour from a list of sessions
+    private LocalDateTime calculatePeakHourForAp(List<Object[]> sessions) {
+        if (sessions == null || sessions.isEmpty()) return null;
+
+        Map<LocalDateTime, Integer> hourCounts = new HashMap<>();
+
+        for (Object[] row : sessions) {
+            Timestamp startTime = (Timestamp) row[1];
+            Timestamp latestTime = (Timestamp) row[2];
+
+            if (startTime == null || latestTime == null) continue;
+
+            LocalDateTime start = startTime.toLocalDateTime().truncatedTo(ChronoUnit.HOURS);
+            LocalDateTime end = latestTime.toLocalDateTime().truncatedTo(ChronoUnit.HOURS);
+
+            LocalDateTime hour = start;
+            while (!hour.isAfter(end)) {
+                hourCounts.put(hour, hourCounts.getOrDefault(hour, 0) + 1);
+                hour = hour.plusHours(1);
+            }
+        }
+
+        return hourCounts.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .orElse(null);
     }
 }
