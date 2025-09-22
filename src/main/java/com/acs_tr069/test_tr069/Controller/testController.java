@@ -3,10 +3,10 @@ package com.acs_tr069.test_tr069.Controller;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import org.springframework.http.HttpHeaders;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +27,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.soap.SOAPBody;
 import javax.xml.soap.SOAPException;
 
-import org.hibernate.HibernateException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -37,6 +36,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,41 +51,41 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
-import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
+
 import com.acs_tr069.test_tr069.CWMPResponses.GetSoapFromString;
+import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
+import com.acs_tr069.test_tr069.CWMPResponses.tr069Response;
+import com.acs_tr069.test_tr069.Entity.auto_complete;
+import com.acs_tr069.test_tr069.Entity.cpe_response_log;
+import com.acs_tr069.test_tr069.Entity.device;
+import com.acs_tr069.test_tr069.Entity.devices;
+import com.acs_tr069.test_tr069.Entity.group_command;
+import com.acs_tr069.test_tr069.Entity.group_ssid;
+import com.acs_tr069.test_tr069.Entity.groups;
 import com.acs_tr069.test_tr069.Entity.httprequestlog;
 import com.acs_tr069.test_tr069.Entity.taskhandler;
 import com.acs_tr069.test_tr069.Entity.webcli_response_log;
-import com.acs_tr069.test_tr069.Entity.devices;
-import com.acs_tr069.test_tr069.Entity.group_command;
-import com.acs_tr069.test_tr069.Entity.auto_complete;
-import com.acs_tr069.test_tr069.Entity.cpe_response_log;
-import com.acs_tr069.test_tr069.Entity.group_ssid;
-import com.acs_tr069.test_tr069.Entity.groups;
-import com.acs_tr069.test_tr069.Entity.device;
-
-import com.acs_tr069.test_tr069.Repo.httplogreqRepo;
-import com.acs_tr069.test_tr069.Repo.taskhandlerRepo;
-import com.acs_tr069.test_tr069.Repo.webcli_response_logRepo;
 import com.acs_tr069.test_tr069.Repo.auto_completeRepository;
 import com.acs_tr069.test_tr069.Repo.cpe_response_logRepository;
+import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
 import com.acs_tr069.test_tr069.Repo.devicesRepository;
 import com.acs_tr069.test_tr069.Repo.group_commandRepo;
 import com.acs_tr069.test_tr069.Repo.groupsRepository;
+import com.acs_tr069.test_tr069.Repo.httplogreqRepo;
 import com.acs_tr069.test_tr069.Repo.ssidRepository;
-import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
-
+import com.acs_tr069.test_tr069.Repo.taskhandlerRepo;
+import com.acs_tr069.test_tr069.Repo.webcli_response_logRepo;
 import com.acs_tr069.test_tr069.StoreRequestResult.GetResponseResult;
 import com.acs_tr069.test_tr069.UDP.udp_sender;
 import com.acs_tr069.test_tr069.ZabbixApi.ZabbixApiRPCCalls;
 import com.acs_tr069.test_tr069.radius.entity.AllowedNasMacAddress;
+import com.acs_tr069.test_tr069.radius.entity.ApAccounting;
 import com.acs_tr069.test_tr069.radius.repository.AllowedNasMacAddressRepository;
+import com.acs_tr069.test_tr069.radius.repository.ApAccountingRepository;
 import com.google.common.base.Charsets;
-import com.acs_tr069.test_tr069.CWMPResponses.RandomCodeGen;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -115,6 +115,8 @@ public class testController {
     private auto_completeRepository auto_completeRepo;
     @Autowired
     private AllowedNasMacAddressRepository allowedNasMacAddressRepository;
+    @Autowired
+    private ApAccountingRepository apAccountingRepository;
 
     String cwmpheader = null;
     String Output = null;
@@ -532,7 +534,7 @@ public class testController {
                     String netboxResponse = AddApInfoToNetbox(device_to_bootstrap.getId());
                     System.out.println("Netbox Response: " + netboxResponse);
 
-                    // add info to radius
+                    // add info to radius (AP Accounting and AllowedNasMacAddress)
                     String radiusResponse = AddApInfoToRadius(device_to_bootstrap.getId());
                     System.out.println("Radius Response: " + radiusResponse);
 
@@ -927,15 +929,34 @@ public class testController {
             System.out.println("calledStationId: " + calledStationId);
             Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
 
+            String returnMessage = "";
             if (!optionalAddress.isPresent()) {
                 AllowedNasMacAddress newAddress = new AllowedNasMacAddress();
                 newAddress.setCalledStationId(calledStationId);
                 newAddress.setUpdatedAt(LocalDateTime.now());
                 allowedNasMacAddressRepository.save(newAddress);
-                return "Mac address added successfully";
+                returnMessage = "Mac address added successfully in Allowed NAS Mac Address table. ";
             } else {
-                return "Mac address already exists";
+                returnMessage = "Mac address already exists in Allowed NAS Mac Address table. ";
             }
+            
+            Optional<ApAccounting> optionalApAccounting = apAccountingRepository.findByCalledStationId(calledStationId);
+
+            if(!optionalApAccounting.isPresent()){
+                ApAccounting newApAccounting = new ApAccounting();
+                newApAccounting.setCalledStationId(calledStationId);
+                newApAccounting.setCreatedOn(OffsetDateTime.now());
+                newApAccounting.setLastUpdated(OffsetDateTime.now());
+                newApAccounting.setSerialNum(deviceData.getserial_number());
+                newApAccounting.setTotalInputOctets(0L);
+                newApAccounting.setTotalOutputOctets(0L);
+                newApAccounting.setTotalSessionTime(0L);
+                apAccountingRepository.save(newApAccounting);
+                returnMessage += "- Mac address added successfully in AP Accounting table";
+            }else{
+                returnMessage += "- Mac address already exists in AP Accounting table";
+            }
+            return returnMessage;
         } catch (Exception e) {
             return "An error occurred. " + e.getMessage();
         }
