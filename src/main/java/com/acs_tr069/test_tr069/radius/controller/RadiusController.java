@@ -239,10 +239,22 @@ public class RadiusController {
         return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("zeep"));
     }
 
+    // Get list of online registered access points info
+    @GetMapping("access-points-online-registered")
+    public ResponseEntity<List<device>> getAllOnlineRegisteredAP() {
+        return ResponseEntity.ok(deviceRepo.getAllOnlineRegisteredDevices());
+    }
+
     // Get list of registered access points info
     @GetMapping("access-points-registered")
     public ResponseEntity<List<device>> getAllRegisteredAP() {
-        return ResponseEntity.ok(deviceRepo.getAllOnlineRegisteredDevices());
+        return ResponseEntity.ok(deviceRepo.getAllRegisteredDevices());
+    }
+
+    // Get Offline AP by ap id
+    @GetMapping("access-points-offline-registered/{apId}")
+    public ResponseEntity<List<device>> getRegisteredDevicesByApId(@PathVariable String apId) {
+        return ResponseEntity.ok(deviceRepo.getRegisteredDevicesByApId(apId));
     }
 
     // Get list of rogue access points info
@@ -339,6 +351,7 @@ public class RadiusController {
     // gett All of the Users Session Details for the past 7 days  - the user must have a session for the past 7days
     @GetMapping("users/active/{username}/sessions")
     public ResponseEntity<Map<String, Object>> getAllSessionsByUsernameForThePast7Days(@PathVariable String username) {
+        // log.info("Fetching data for username: {}", username);
         List<Map<String, Object>> userSessions = radiusService.getAllSessionsByUsernameForThePast7Days(username);
         
         Map<String, Object> response = new HashMap<>();
