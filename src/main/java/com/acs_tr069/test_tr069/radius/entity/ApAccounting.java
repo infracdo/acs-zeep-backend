@@ -18,7 +18,7 @@ public class ApAccounting {
     @Column(name = "called_station_id")
     private String calledStationId;
 
-	@Column(name = "serial_um")
+	@Column(name = "serial_num")
     private String serialNum;
 
 	@Column(name = "totalinputoctets")
