@@ -13,9 +13,9 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "subscribers", schema = "public") 
+@Table(name = "subscribers", schema = "public")
 public class Subscribers {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -31,7 +31,7 @@ public class Subscribers {
     private Integer sessionLimit;
 
     @Column(name = "remaining_session_time")
-    private Integer remainingSessionTime;
+    private Long remainingSessionTime;
 
     @Column(name = "bytes_limit")
     private Long bytesLimit;

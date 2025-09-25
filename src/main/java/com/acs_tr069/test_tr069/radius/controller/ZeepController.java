@@ -169,9 +169,9 @@ public class ZeepController {
                 return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
             }
 
-            int value = 0;
+            long value = 0;
             try {
-                value = Integer.parseInt(valueStr.trim());
+                value = Long.parseLong(valueStr.trim());
                 if (value <= 0) {
                     return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
                 }
@@ -217,10 +217,10 @@ public class ZeepController {
                 return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
             }
 
-            int value = 0;
+            long value = 0;
 
             try {
-                value = Integer.parseInt(valueStr.trim());
+                value = Long.parseLong(valueStr.trim());
                 if (value <= 0) {
                     return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
                 }
@@ -234,8 +234,8 @@ public class ZeepController {
             }
 
             Subscribers subscriber = optionalSubscriber.get();
-            Integer currentTimeLeft = Optional.ofNullable(subscriber.getRemainingSessionTime()).orElse(0);
-            int updatedTimeLeft = currentTimeLeft + value;
+            Long currentTimeLeft = Optional.ofNullable(subscriber.getRemainingSessionTime()).orElse(0L);
+            long updatedTimeLeft = currentTimeLeft + value;
 
             subscriber.setRemainingSessionTime(updatedTimeLeft);
             subscriberRepo.save(subscriber);
