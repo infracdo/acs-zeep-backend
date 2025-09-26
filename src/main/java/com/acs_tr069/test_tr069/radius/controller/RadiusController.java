@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.acs_tr069.test_tr069.Entity.device;
 import com.acs_tr069.test_tr069.Repo.device_frontendRepository;
+import com.acs_tr069.test_tr069.radius.entity.Routers;
+import com.acs_tr069.test_tr069.radius.repository.RoutersRepository;
 import com.acs_tr069.test_tr069.radius.service.RadiusService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +37,9 @@ public class RadiusController {
     
     @Autowired
     private device_frontendRepository deviceRepo;
+    
+    @Autowired
+    private RoutersRepository routerRepo;
 
     // returns number of users currently connected to APs
     @GetMapping("count-online-users")
@@ -222,13 +229,13 @@ public class RadiusController {
     }
 
     // Get list of online access points info
-    @GetMapping("access-points-online")
+    @GetMapping("access-points/online")
     public ResponseEntity<List<device>> getAllOnlineAP() {
         return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("", "online"));
     }
 
     // Get list of offline access points info
-    @GetMapping("access-points-offline")
+    @GetMapping("access-points/offline")
     public ResponseEntity<List<device>> getAllOfflineAP() {
         return ResponseEntity.ok(deviceRepo.getDevicesByParentAndStatus("", "offline"));
     }
@@ -239,28 +246,80 @@ public class RadiusController {
         return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("zeep"));
     }
 
-    // Get list of online registered access points info
-    @GetMapping("access-points-online-registered")
-    public ResponseEntity<List<device>> getAllOnlineRegisteredAP() {
-        return ResponseEntity.ok(deviceRepo.getAllOnlineRegisteredDevices());
-    }
+    //TODO: Transfer the business logic to service layer if there is service layer for Routers
+    @GetMapping("access-points/registered")
+    public ResponseEntity<Map<String, Object>> getAllRegisteredAP(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String apId) {
 
-    // Get list of registered access points info
-    @GetMapping("access-points-registered")
-    public ResponseEntity<List<device>> getAllRegisteredAP() {
-        return ResponseEntity.ok(deviceRepo.getAllRegisteredDevices());
-    }
+        List<device> result;
+        if (status != null && apId != null) {
+            // Get list of registered access points info by status(online or offline) and by ap id
+            result = deviceRepo.getRegisteredDevicesByStatusAndByApId(status, apId);
+        } else if (status != null && apId == null) {
+            // Get list of registered access points info by status(online or offline)
+            result = deviceRepo.getAllRegisteredDevicesByStatus(status);
+        } else if (status == null && apId != null) {
+            // Get registered access points info by ap id
+            result = deviceRepo.getRegisteredDevicesByApId(apId);
+            return ResponseEntity.ok(Collections.singletonMap("registeredAPs", result));
+        } else {
+            // get all registered access points info -> NO FILTER/CONDITION
+            result = deviceRepo.getAllRegisteredDevices();
+        }
 
-    // Get Offline AP by ap id
-    @GetMapping("access-points-offline-registered/{apId}")
-    public ResponseEntity<List<device>> getRegisteredDevicesByApId(@PathVariable String apId) {
-        return ResponseEntity.ok(deviceRepo.getRegisteredDevicesByApId(apId));
+        Set<String> macs = result.stream()
+            .map(d -> d.getmac_address() != null ? d.getmac_address().replace(":", "") : null)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        Set<String> serials = result.stream()
+            .map(device::getserial_number)
+            .collect(Collectors.toSet());
+
+        List<Routers> routers = routerRepo.findAllBySerialNoInAndMacAddressIn(serials, macs);
+
+        Map<String, Routers> routerMap = routers.stream()
+            .collect(Collectors.toMap(
+                r -> r.getSerialNo() + "_" + r.getMacAddress(),
+                r -> r,
+                (existing, replacement) -> existing
+            ));
+
+            List<Map<String, Object>> responseList = result.stream().map(d -> {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("serial_number", d.getserial_number());
+            entry.put("device_name", d.getdevice_name());
+            entry.put("model", d.getmodel());
+            entry.put("status", d.getstatus());
+            entry.put("parent", d.getparent());
+            entry.put("mac_address", d.getmac_address());
+            entry.put("date_offline", d.getdate_offline());
+            entry.put("location", d.getlocation());
+
+            String mac = d.getmac_address() != null ? d.getmac_address().replace(":", "") : null;
+            Routers r = routerMap.get(d.getserial_number() + "_" + mac);
+
+            if (r != null && r.getLatitude() != null && r.getLongitude() != null) {
+                entry.put("coordinates", r.getLongitude() + ", " + r.getLatitude());
+            } else {
+                entry.put("coordinates", "-");
+            }
+
+            return entry;
+        }).collect(Collectors.toList());
+
+        // log.info("Total Registered APs found: {}", responseList.size());
+        // log.info("Data: {}", responseList);
+        return ResponseEntity.ok(Collections.singletonMap("registeredAPs", (Object) responseList));
     }
 
     // Get list of rogue access points info
-    @GetMapping("access-points-rogue")
-    public ResponseEntity<List<device>> getAllRogueAP() {
-        return ResponseEntity.ok(deviceRepo.getAllDevicesByParent("unassigned"));
+    @GetMapping("access-points/rogue")
+    public ResponseEntity<Map<String, List<device>>> getAllRogueAP() {
+        List<device> result = deviceRepo.getAllDevicesByParent("unassigned");
+        Map<String, List<device>> response = Collections.singletonMap("rogueAPs", result);
+        return ResponseEntity.ok(response);
     }
 
     // Get number of currently connected users per access point
@@ -491,6 +550,7 @@ public class RadiusController {
         Map<String, Object> response = new HashMap<>();
         response.put("inActiveAp", activeApByApId);
         
+        // log.info("Response: {}", response);
         return ResponseEntity.ok(response);
     }
 

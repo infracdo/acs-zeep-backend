@@ -14,10 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.acs_tr069.test_tr069.radius.entity.Accounting;
 import com.acs_tr069.test_tr069.radius.repository.AccountingRepository;
+import com.acs_tr069.test_tr069.radius.repository.RoutersRepository;
 import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,9 @@ public class RadiusService {
     private final SubscriberRepository subscriberRepository;
 
     private final AccountingRepository accountingRepository;
+
+    @Autowired
+    private RoutersRepository routerRepo;
 
     public RadiusService(AccountingRepository accountingRepository, SubscriberRepository subscriberRepository) {
         this.accountingRepository = accountingRepository;
@@ -294,13 +299,31 @@ public class RadiusService {
             user.put("acctSessionId", row[0]);
             user.put("username", row[1]);
             user.put("callingStationId", row[2]);
-            user.put("calledStationId", row[3]);
             
+            String apId = (String) row[3];
+            user.put("calledStationId", apId);
+            
+            if(apId != null){
+                String mac = stripMacAddressSuffix(apId);
+                // can be optimized, but no need since this is mostly 1 or 3 records per user with current online sessions
+                // if need to be optimized, you can follow the flow from RadiusController.getAllRegisteredAP
+                routerRepo.findFirstByMacAddress(mac.toUpperCase())
+                .ifPresent(router -> {
+                    user.put("coordinates", router.getLongitude() + ", " + router.getLatitude());
+                    // user.put("longitude", router.getLongitude());
+                    // user.put("latitude", router.getLatitude());
+                });
+            }
+
             Timestamp startTime = (Timestamp) row[4];
-            if (startTime != null) {
-                long startSeconds = startTime.getTime() / 1000;
-                user.put("startTime", formatRawTimeStamp(startSeconds));
-            } else {
+            if (startTime == null) {
+                //If StartTime is missing, we will fetch the earliest timestamp for that session Id
+                String sessionId = String.valueOf(row[0]);;
+                startTime = accountingRepository.findTimestampStartTimeBySessionId(sessionId);//this is bad, but in the future, the starttime from accounting table shouldnt be null, so it should be okay`
+            }
+            if(startTime != null){
+                user.put("startTime", formatRawTimeStamp(startTime.getTime() / 1000));
+            }else {
                 user.put("startTime", "-");
             }
             
@@ -348,24 +371,24 @@ public class RadiusService {
     }
     
     public List<Map<String, Object>> getAllSessionsByUsernameForThePast7Days(String username) {
-        List<Object[]> results = accountingRepository.findAllSessionsByUsernameForThePast7Days(username);
+        // List<Object[]> results = accountingRepository.findAllSessionsByUsernameForThePast7Days(username);
+        List<Object[]> results = accountingRepository.findAllSessionsWithLocationByUsernameForThePast7Days(username);
         List<Map<String, Object>> response = new ArrayList<>();
-        
+
         for (Object[] row : results) {
             Map<String, Object> user = new HashMap<>();
-            
+
             user.put("acctSessionId", row[0]);
             user.put("callingStationId", row[1]);
             user.put("calledStationId", row[2]);
-            
 
             Timestamp startTime = (Timestamp) row[3];
-            if (startTime != null) {
-                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
-                user.put("startTime", formattedStartTime);
-            } else {
-                user.put("startTime", "-");
+            if (startTime == null) {
+                //If StartTime is missing, we will fetch the earliest timestamp for that session Id
+                String sessionId = String.valueOf(row[0]);
+                startTime = accountingRepository.findTimestampStartTimeBySessionId(sessionId);//this is bad, but in the future, the starttime from accounting table shouldnt be null, so it should be okay`
             }
+            user.put("startTime", startTime != null ? formatRawTimeStamp(startTime.getTime() / 1000) : "-");
 
             Long durationSeconds = row[4] != null ? ((Number) row[4]).longValue() : 0;
             user.put("duration", formatDuration((double) durationSeconds));
@@ -373,13 +396,20 @@ public class RadiusService {
             Long bandwidth = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
             
+            Double longitude = row[6] != null ? ((Number) row[6]).doubleValue() : null;
+            Double latitude = row[7] != null ? ((Number) row[7]).doubleValue() : null;
+            if(longitude == null || latitude == null){
+                user.put("coordinates", "-");
+            }else{
+                user.put("coordinates", longitude + ", " + latitude);
+            }
+            
             response.add(user);
         }
-        
-        // log.info("getAllSessionsByUsernameForThePast7Days: {}", response);
+
         return response;
     }
-    
+
     public List<Map<String, Object>> getAllRegisteredUsersWithSessions() {
         List<Object[]> results = accountingRepository.findAllRegisteredUsersWithSessions();
         List<Map<String, Object>> response = new ArrayList<>();
@@ -411,7 +441,8 @@ public class RadiusService {
     }
     
     public List<Map<String, Object>> getAllSessionsByUsername(String username) {
-        List<Object[]> results = accountingRepository.findAllSessionsByUsername(username);
+        // List<Object[]> results = accountingRepository.findAllSessionsByUsername(username);
+        List<Object[]> results = accountingRepository.findAllSessionsWithLocationByUsername(username);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -423,10 +454,14 @@ public class RadiusService {
             user.put("calledStationId", row[2]);
 
             Timestamp startTime = (Timestamp) row[3];
-            if (startTime != null) {
-                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
-                user.put("startTime", formattedStartTime);
-            } else {
+            if (startTime == null) {
+                //If StartTime is missing, we will fetch the earliest timestamp for that session Id
+                String sessionId = String.valueOf(row[0]);;
+                startTime = accountingRepository.findTimestampStartTimeBySessionId(sessionId);//this is bad, but in the future, the starttime from accounting table shouldnt be null, so it should be okay`
+            }
+            if(startTime != null){
+                user.put("startTime", formatRawTimeStamp(startTime.getTime() / 1000));
+            }else {
                 user.put("startTime", "-");
             }
 
@@ -435,7 +470,14 @@ public class RadiusService {
             
             Long bandwidth = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
-            
+
+            Double longitude = row[6] != null ? ((Number) row[6]).doubleValue() : null;
+            Double latitude = row[7] != null ? ((Number) row[7]).doubleValue() : null;
+            if(longitude == null || latitude == null){
+                user.put("coordinates", "-");
+            }else{
+                user.put("coordinates", longitude + ", " + latitude);
+            }
             response.add(user);
         }
         
@@ -447,8 +489,10 @@ public class RadiusService {
         return accountingRepository.countAllCurrentOnlineApForThePast30Mins();
     }
 
+    //
     public List<Map<String, Object>> getAllCurrentOnlineApForThePast30Mins() {
-        List<Object[]> results = accountingRepository.findAllCurrentOnlineApForThePast30Mins();
+        // List<Object[]> results = accountingRepository.findAllCurrentOnlineApForThePast30Mins();
+        List<Object[]> results = accountingRepository.findAllCurrentOnlineApWithLocationForThePast30Mins();
         List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
 
         List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
@@ -484,6 +528,13 @@ public class RadiusService {
             }
             user.put("peakHour", formattedPeakHour);
 
+            Double longitude = row[4] != null ? ((Number) row[4]).doubleValue() : null;
+            Double latitude = row[5] != null ? ((Number) row[5]).doubleValue() : null;
+            if(longitude == null || latitude == null){
+                user.put("coordinates", "-");
+            }else{
+                user.put("coordinates", longitude + ", " + latitude);
+            }
             response.add(user);
         }
 
@@ -510,7 +561,6 @@ public class RadiusService {
             
             Long avgSessionLengthInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("avgSessionLength", formatDuration((double) avgSessionLengthInSeconds));
-            
             response.add(user);
         }
         
@@ -531,19 +581,22 @@ public class RadiusService {
             user.put("calledStationId", row[3]);
 
             Timestamp startTime = (Timestamp) row[4];
-            if (startTime != null) {
-                String formattedStartTime = formatRawTimeStamp(startTime.getTime() / 1000);
-                user.put("startTime", formattedStartTime);
-            } else {
+            if (startTime == null) {
+                //If StartTime is missing, we will fetch the earliest timestamp for that session Id
+                String sessionId = String.valueOf(row[1]);;
+                startTime = accountingRepository.findTimestampStartTimeBySessionId(sessionId);//this is bad, but in the future, the starttime from accounting table shouldnt be null, so it should be okay`
+            }
+            if(startTime != null){
+                user.put("startTime", formatRawTimeStamp(startTime.getTime() / 1000));
+            }else {
                 user.put("startTime", "-");
             }
-
-            Long totalDurationInSeconds = row[6] != null ? ((Number) row[6]).longValue() : 0L;
+            
+            Long totalDurationInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("duration", formatDuration((double) totalDurationInSeconds));
 
-            Long bandwidth = row[7] != null ? ((Number) row[7]).longValue() : 0L;
+            Long bandwidth = row[6] != null ? ((Number) row[6]).longValue() : 0L;
             user.put("bandwidthUsage", formatBandwidth(bandwidth));
-            
             response.add(user);
         }
         
@@ -556,7 +609,8 @@ public class RadiusService {
     }
 
     public List<Map<String, Object>> getAllActiveApForThePast7Days() {
-        List<Object[]> results = accountingRepository.findAllActiveApForThePast7Days();
+        // List<Object[]> results = accountingRepository.findAllActiveApForThePast7Days();
+        List<Object[]> results = accountingRepository.findAllActiveApWithLocationForThePast7Days();
         List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
 
         List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
@@ -591,6 +645,13 @@ public class RadiusService {
             }
             user.put("peakHour", formattedPeakHour);
 
+            Double longitude = row[4] != null ? ((Number) row[4]).doubleValue() : null;
+            Double latitude = row[5] != null ? ((Number) row[5]).doubleValue() : null;
+            if(longitude == null || latitude == null){
+                user.put("coordinates", "-");
+            }else{
+                user.put("coordinates", longitude + ", " + latitude);
+            }
             response.add(user);
         }
         
@@ -599,7 +660,7 @@ public class RadiusService {
     }
     
     public List<Map<String, Object>> getAllActiveApForThePast7DaysByApId(String apId) {
-        List<Object[]> results = accountingRepository.findAllActiveApForThePast7DaysByApId(apId);
+        List<Object[]> results = accountingRepository.findAllActiveOrInActiveApForThePast7DaysByApId(apId);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -617,7 +678,6 @@ public class RadiusService {
             
             Long avgSessionLengthInSeconds = row[5] != null ? ((Number) row[5]).longValue() : 0L;
             user.put("avgSessionLength", formatDuration((double) avgSessionLengthInSeconds));
-
             response.add(user);
         }
         
@@ -630,7 +690,8 @@ public class RadiusService {
     }
 
     public List<Map<String, Object>> getAllInActiveApForMoreThan7Days() {
-        List<Object[]> results = accountingRepository.findAllInActiveApForMoreThan7Days();
+        // List<Object[]> results = accountingRepository.findAllInActiveApForMoreThan7Days();
+        List<Object[]> results = accountingRepository.findAllInActiveApWithLocationForMoreThan7Days();
         List<String> apIds = results.stream().map(row -> (String) row[0]).collect(Collectors.toList());
         
         List<Object[]> allSessions = accountingRepository.findAllTimestampsByApId(apIds);
@@ -666,6 +727,13 @@ public class RadiusService {
             }
             user.put("peakHour", formattedPeakHour);
 
+            Double longitude = row[4] != null ? ((Number) row[4]).doubleValue() : null;
+            Double latitude = row[5] != null ? ((Number) row[5]).doubleValue() : null;
+            if(longitude == null || latitude == null){
+                user.put("coordinates", "-");
+            }else{
+                user.put("coordinates", longitude + ", " + latitude);
+            }
             response.add(user);
         }
         
@@ -674,7 +742,7 @@ public class RadiusService {
     }
 
     public List<Map<String, Object>> getAllInActiveApForThePast7DaysByApId(String apId) {
-        List<Object[]> results = accountingRepository.findAllInActiveApForThePast7DaysByApId(apId);
+        List<Object[]> results = accountingRepository.findAllActiveOrInActiveApForThePast7DaysByApId(apId);
         List<Map<String, Object>> response = new ArrayList<>();
         
         for (Object[] row : results) {
@@ -812,5 +880,13 @@ public class RadiusService {
             .max(Map.Entry.comparingByValue())
             .map(Map.Entry::getKey)
             .orElse(null);
+    }
+
+    //Remove suffix from MAC address AFTER COLON if present (e.g., "AABBCCDDEE:GWAPO VAL" -> "AABBCCDDEE")
+    public static String stripMacAddressSuffix(String mac) {
+        if (mac == null) return null;
+        int index = mac.indexOf(':');
+        if (index == -1) return mac;
+        return mac.substring(0, index);
     }
 }
