@@ -68,4 +68,11 @@ public class Subscribers {
 
     @Column(name = "registration_date")
     private String registrationDate;
+
+    @Column(name = "max_uprate")
+    private Long maxUprate;
+
+    @Column(name = "max_downrate")
+    private Long maxDownrate;
+
 }

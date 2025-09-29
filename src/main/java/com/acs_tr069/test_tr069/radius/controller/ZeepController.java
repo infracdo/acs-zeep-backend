@@ -150,6 +150,74 @@ public class ZeepController {
         }
     }
 
+    @PostMapping(path = "/setBandwidthLimit")
+    public ResponseEntity<?> updateBandwidthLimit(@RequestBody Map<String, String> params)
+            throws JsonMappingException, JsonProcessingException, InterruptedException {
+        if (params == null) {
+            return new ResponseEntity<>("Invalid input", HttpStatus.BAD_REQUEST);
+        }
+        try {
+            String username = params.get("username");
+            if (username == null || username.trim().isEmpty()) {
+                return new ResponseEntity<>("Username is missing/invalid", HttpStatus.BAD_REQUEST);
+            }
+            username = username.trim();
+
+            String maxuprateStr = params.get("maxUpRate");
+            String maxdownrateStr = params.get("maxDownRate");
+
+            Long maxuprate = null;
+            Long maxdownrate = null;
+
+            if (maxuprateStr != null && !maxuprateStr.trim().isEmpty()) {
+                try {
+                    maxuprate = Long.parseLong(maxuprateStr.trim());
+                    if (maxuprate <= 0) {
+                        maxuprate = null;
+                    }
+                } catch (NumberFormatException e) {
+                    // do nothing
+                }
+            }
+
+            if (maxdownrateStr != null && !maxdownrateStr.trim().isEmpty()) {
+                try {
+                    maxdownrate = Long.parseLong(maxdownrateStr.trim());
+                    if (maxdownrate <= 0) {
+                        maxdownrate = null;
+                    }
+                } catch (NumberFormatException e) {
+                    // do nothing
+                }
+            }
+
+            if (maxuprate == null && maxdownrate == null) {
+                return new ResponseEntity<>("Bandwidth limit values are missing/invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            Optional<Subscribers> optionalSubscriber = subscriberRepo.findByUsername(username);
+            if (!optionalSubscriber.isPresent()) {
+                return new ResponseEntity<>("Account not found", HttpStatus.NOT_FOUND);
+            }
+
+            Subscribers subscriber = optionalSubscriber.get();
+
+            if (maxuprate != null) {
+                subscriber.setMaxUprate(maxuprate);
+            }
+            if (maxdownrate != null) {
+                subscriber.setMaxDownrate(maxdownrate);
+            }
+
+            subscriberRepo.save(subscriber);
+            return new ResponseEntity<>("Bandwidth limit has been changed", HttpStatus.OK);
+
+        } catch (Exception e) {
+            String errorMessage = "Failed to change bandwidth limit. " + e.getMessage();
+            return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PostMapping(path = "/topupBytes")
     public ResponseEntity<?> addBytes(@RequestBody Map<String, String> params)
             throws JsonMappingException, JsonProcessingException, InterruptedException {
