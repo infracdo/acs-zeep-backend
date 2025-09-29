@@ -87,7 +87,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     long countTotalUserConnectionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype = 'Start' AND time_stamp >= :startOfDay", nativeQuery = true)
+    @Query(value = "SELECT COUNT(DISTINCT acctsessionid) FROM accounting WHERE time_stamp >= :startOfDay", nativeQuery = true)
     long countTotalSessionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total bandwidth consumption for today
