@@ -1,5 +1,6 @@
 package com.acs_tr069.test_tr069.radius.repository;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -86,7 +87,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     long countTotalUserConnectionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total user connections for today
-    @Query(value = "SELECT COUNT(calling_station_id) FROM accounting WHERE acctstatustype = 'Start' AND time_stamp >= :startOfDay", nativeQuery = true)
+    @Query(value = "SELECT COUNT(DISTINCT acctsessionid) FROM accounting WHERE time_stamp >= :startOfDay", nativeQuery = true)
     long countTotalSessionsToday(@Param("startOfDay") long startOfDay);
 
     // Query to get the total bandwidth consumption for today
@@ -228,12 +229,11 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "SELECT DISTINCT ON (a.acctsessionid) " +
         "    a.acctsessionid, " +
         "    a.username, " +
-        "    a.start_time, " +
-        "    a.called_station_id, " +
         "    a.calling_station_id, " +
+        "    a.called_station_id, " +
+        "    TO_TIMESTAMP(a.start_time) AS start_time, " +
         "    a.acctsessiontime, " +
-        "    a.acctinputoctets + a.acctoutputoctets AS bandwidth, " +
-        "    a.acctstatustype " +
+        "    a.acctinputoctets + a.acctoutputoctets AS bandwidth " +
         "FROM accounting a " +
         "WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - INTERVAL '30 minutes' " +
         "    AND a.username = :username " +
@@ -280,20 +280,43 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         nativeQuery = true)
     Long countForAllActiveUsersForThePast7Days();
 
+    // @Query(value =
+    //     "SELECT DISTINCT ON (a.acctsessionid) " +
+    //     "    a.acctsessionid, " +
+    //     "    a.calling_station_id, " +
+    //     "    a.called_station_id, " +
+    //     "    TO_TIMESTAMP(a.start_time) AS start_time, " +
+    //     "    a.acctsessiontime, " +
+    //     "    a.acctinputoctets + a.acctoutputoctets AS bandwidth " +
+    //     "FROM accounting a " +
+    //     "WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - INTERVAL '7 days' " +
+    //     "   AND a.username = :username " +
+    //     "ORDER BY a.acctsessionid, a.time_stamp DESC ",
+    //     nativeQuery = true)
+    // List<Object[]> findAllSessionsByUsernameForThePast7Days(@Param("username") String username);
     @Query(value =
+        "WITH latest_routers AS ( " +
+        "    SELECT DISTINCT ON (UPPER(r.mac_address)) r.* " +
+        "    FROM \"Routers\" r " +
+        "    ORDER BY UPPER(r.mac_address), r.created_at DESC " +
+        ") " +
         "SELECT DISTINCT ON (a.acctsessionid) " +
         "    a.acctsessionid, " +
         "    a.calling_station_id, " +
         "    a.called_station_id, " +
-        "    a.start_time, " +
+        "    TO_TIMESTAMP(a.start_time) AS start_time, " +
         "    a.acctsessiontime, " +
-        "    a.acctinputoctets + a.acctoutputoctets AS bandwitdh " +
+        "    a.acctinputoctets + a.acctoutputoctets AS bandwidth, " +
+        "    lr.long, " +
+        "    lr.lat " +
         "FROM accounting a " +
+        "LEFT JOIN latest_routers lr " +
+        "    ON UPPER(split_part(a.called_station_id, chr(58), 1)) = UPPER(lr.mac_address) " + //chr(58) is colon (:)
         "WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - INTERVAL '7 days' " +
-        "   AND a.username = :username " +
-        "ORDER BY a.acctsessionid, a.time_stamp DESC ",
+        "    AND a.username = :username " +
+        "ORDER BY a.acctsessionid, a.time_stamp DESC",
         nativeQuery = true)
-    List<Object[]> findAllSessionsByUsernameForThePast7Days(@Param("username") String username);
+    List<Object[]> findAllSessionsWithLocationByUsernameForThePast7Days(@Param("username") String username); // Modified query to include location data from Routers table
 
     @Query(value =
         "WITH latest_records AS ( " +
@@ -303,7 +326,6 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "        a.acctsessiontime, " +
         "        a.acctinputoctets + a.acctoutputoctets AS bandwidth " +
         "    FROM accounting a " +
-        "    WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - INTERVAL '7 days' " +
         "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
         ") " +
         "SELECT " +
@@ -323,19 +345,42 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
     Long countAllRegisteredUsersWithSessions();
 
 
+    // @Query(value =
+    //     "SELECT DISTINCT ON (a.acctsessionid)" +
+    //     "    a.acctsessionid, " +
+    //     "    a.calling_station_id, " +
+    //     "    a.called_station_id, " +
+    //     "    TO_TIMESTAMP(a.start_time) AS start_time, " +
+    //     "    a.acctsessiontime, " +
+    //     "    (a.acctinputoctets + a.acctoutputoctets) AS bandwidth " +
+    //     // "    a.location " +
+    //     "FROM accounting a " +
+    //     "WHERE a.username = :username " +
+    //     "ORDER BY a.acctsessionid, a.time_stamp DESC ",
+    //     nativeQuery = true)
+    // List<Object[]> findAllSessionsByUsername(@Param("username") String username);
     @Query(value =
-        "SELECT DISTINCT ON (a.acctsessionid)" +
+        "WITH latest_routers AS ( " +
+        "    SELECT DISTINCT ON (UPPER(r.mac_address)) r.* " +
+        "    FROM \"Routers\" r " +
+        "    ORDER BY UPPER(r.mac_address), r.created_at DESC " +
+        ") " +
+        "SELECT DISTINCT ON (a.acctsessionid) " +
         "    a.acctsessionid, " +
         "    a.calling_station_id, " +
         "    a.called_station_id, " +
-        "    a.start_time, " +
+        "    TO_TIMESTAMP(a.start_time) AS start_time, " +
         "    a.acctsessiontime, " +
-        "    (a.acctinputoctets + a.acctoutputoctets) AS bandwidth " +
+        "    (a.acctinputoctets + a.acctoutputoctets) AS bandwidth, " +
+        "    lr.long, " +
+        "    lr.lat " +
         "FROM accounting a " +
+        "LEFT JOIN latest_routers lr " +
+        "    ON UPPER(split_part(a.called_station_id, chr(58), 1)) = UPPER(lr.mac_address) " + //chr(58) is colon (:)
         "WHERE a.username = :username " +
-        "ORDER BY a.acctsessionid, a.time_stamp DESC ",
+        "ORDER BY a.acctsessionid, a.time_stamp DESC",
         nativeQuery = true)
-    List<Object[]> findAllSessionsByUsername(@Param("username") String username);
+    List<Object[]> findAllSessionsWithLocationByUsername(@Param("username") String username); // Modified query to include location data from Routers table
 
     @Query(value =
         "WITH latest_sessions AS ( " +
@@ -354,10 +399,34 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         nativeQuery = true)
     Long countAllCurrentOnlineApForThePast30Mins();
 
+    // @Query(value =
+    //     "WITH latest_sessions AS ( " +
+    //     "    SELECT DISTINCT ON (a.acctsessionid) " +
+    //     "        a.called_station_id AS ap_id, " +
+    //     "        a.acctsessionid, " +
+    //     "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
+    //     "        a.acctsessiontime AS duration_seconds, " +
+    //     "        a.acctinputoctets + a.acctoutputoctets AS bandwidth, " +
+    //     "        a.acctstatustype " +
+    //     "    FROM accounting a " +
+    //     "    WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - INTERVAL '30 minutes' " +
+    //     "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
+    //     ") " +
+    //     "SELECT " +
+    //     "    ap_id, " +
+    //     "    COUNT(*) AS total_sessions, " +
+    //     "    SUM(bandwidth) AS total_bandwidth, " +
+    //     "    AVG(duration_seconds) AS avg_session_duration_seconds " +
+    //     "FROM latest_sessions " +
+    //     "WHERE acctstatustype != 'Stop' " +
+    //     "GROUP BY ap_id " +
+    //     "ORDER BY total_bandwidth DESC",
+    //     nativeQuery = true)
+    // List<Object[]> findAllCurrentOnlineApForThePast30Mins();
     @Query(value =
         "WITH latest_sessions AS ( " +
         "    SELECT DISTINCT ON (a.acctsessionid) " +
-        "        a.called_station_id AS ap_id, " +  
+        "        a.called_station_id AS ap_id, " +
         "        a.acctsessionid, " +
         "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
         "        a.acctsessiontime AS duration_seconds, " +
@@ -368,16 +437,24 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
         ") " +
         "SELECT " +
-        "    ap_id, " +
+        "    ls.ap_id, " +
         "    COUNT(*) AS total_sessions, " +
-        "    SUM(bandwidth) AS total_bandwidth, " +
-        "    AVG(duration_seconds) AS avg_session_duration_seconds " +
-        "FROM latest_sessions " +
-        "WHERE acctstatustype != 'Stop' " +
-        "GROUP BY ap_id " +
+        "    SUM(ls.bandwidth) AS total_bandwidth, " +
+        "    AVG(ls.duration_seconds) AS avg_session_duration_seconds, " +
+        "    lr.long, " +
+        "    lr.lat " +
+        "FROM latest_sessions ls " +
+        "LEFT JOIN ( " +
+        "    SELECT DISTINCT ON (UPPER(r.mac_address)) r.* " +
+        "    FROM \"Routers\" r " +
+        "    ORDER BY UPPER(r.mac_address), r.created_at DESC " +
+        ") lr " +
+        "ON UPPER(split_part(ls.ap_id, chr(58), 1)) = UPPER(lr.mac_address) " + //chr(58) is colon (:)
+        "WHERE ls.acctstatustype != 'Stop' " +
+        "GROUP BY ls.ap_id, lr.long, lr.lat " +
         "ORDER BY total_bandwidth DESC",
         nativeQuery = true)
-    List<Object[]> findAllCurrentOnlineApForThePast30Mins();
+    List<Object[]> findAllCurrentOnlineApWithLocationForThePast30Mins(); // Modified query to include location data from Routers table
 
     @Query(value =
         "WITH alive_sessions AS ( " +
@@ -421,14 +498,13 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "), " +
         "active_sessions AS ( " +
         "    SELECT DISTINCT ON (a.acctsessionid) " +
-        "           a.acctsessionid, " +
         "           a.username, " +
+        "           a.acctsessionid, " +
         "           a.calling_station_id, " +
         "           a.called_station_id, " +
-        "           a.start_time, " +
+        "           TO_TIMESTAMP(a.start_time) AS start_time, " +
         "           a.acctsessiontime AS duration_seconds, " +
-        "           a.acctinputoctets AS latest_input, " +
-        "           a.acctoutputoctets AS latest_output, " +
+        "           a.acctinputoctets + a.acctoutputoctets AS bandwidth, " +
         "           TO_TIMESTAMP(a.time_stamp) AS latest_time " +
         "    FROM accounting a " +
         "    LEFT JOIN stop_sessions s " +
@@ -451,43 +527,70 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         @Param("username") String username);
 
     @Query(value =
-        "WITH valid_sessions AS ( " +
-        "    SELECT called_station_id AS ap_id, acctsessionid " +
-        "    FROM accounting " +
-        "    GROUP BY called_station_id, acctsessionid " +
-        "    HAVING MAX(TO_TIMESTAMP(time_stamp)) > NOW() - interval '7 days' " +
+        "WITH ap_sessions AS ( " +
+        "    SELECT " +
+        "        a.called_station_id AS ap_id, " +
+        "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen " +
+        "    FROM accounting a " +
+        "    GROUP BY a.called_station_id " +
         ") " +
-        "SELECT COUNT(*) AS total_aps " +
-        "FROM ( " +
-        "    SELECT DISTINCT ap_id " +
-        "    FROM valid_sessions " +
-        ") AS aps",
+        "SELECT COUNT(*) AS active_ap_count " +
+        "FROM ap_sessions " +
+        "WHERE last_seen >= NOW() - interval '7 days'",
         nativeQuery = true)
     Long countAllActiveApForThePast7Days();
 
+    // @Query(value =
+    //     "WITH ap_sessions AS ( " +
+    //     "    SELECT " +
+    //     "        a.called_station_id AS ap_id, " +
+    //     "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen, " +
+    //     "        COUNT(DISTINCT a.acctsessionid) AS total_sessions, " +
+    //     "        SUM(a.acctinputoctets + a.acctoutputoctets) AS total_bandwidth, " +
+    //     "        AVG(a.acctsessiontime) AS avg_session_duration_seconds " +
+    //     "    FROM accounting a " +
+    //     "    GROUP BY a.called_station_id " +
+    //     ") " +
+    //     "SELECT " +
+    //     "    ap_id, " +
+    //     "    total_sessions, " +
+    //     "    total_bandwidth, " +
+    //     "    avg_session_duration_seconds " +
+    //     "FROM ap_sessions " +
+    //     "WHERE last_seen >= NOW() - interval '7 days' " +
+    //     "ORDER BY total_bandwidth DESC",
+    //     nativeQuery = true)
+    // List<Object[]> findAllActiveApForThePast7Days();
     @Query(value =
-        "WITH sessions AS ( " +
-        "    SELECT DISTINCT ON (a.acctsessionid, a.called_station_id) " +
+        "WITH latest_routers AS ( " +
+        "    SELECT DISTINCT ON (UPPER(r.mac_address)) r.* " +
+        "    FROM \"Routers\" r " +
+        "    ORDER BY UPPER(r.mac_address), r.created_at DESC " +
+        "), " +
+        "ap_sessions AS ( " +
+        "    SELECT " +
         "        a.called_station_id AS ap_id, " +
-        "        a.acctsessionid, " +
-        "        TO_TIMESTAMP(a.start_time) AS start_time, " +
-        "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
-        "        (a.acctinputoctets + a.acctoutputoctets) AS bandwidth, " +
-        "        a.acctsessiontime AS duration_seconds " +
+        "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen, " +
+        "        COUNT(DISTINCT a.acctsessionid) AS total_sessions, " +
+        "        SUM(a.acctinputoctets + a.acctoutputoctets) AS total_bandwidth, " +
+        "        AVG(a.acctsessiontime) AS avg_session_duration_seconds " +
         "    FROM accounting a " +
-        "    WHERE TO_TIMESTAMP(a.time_stamp) >= NOW() - interval '7 days' " +
-        "    ORDER BY a.acctsessionid, a.called_station_id, a.time_stamp DESC " +
+        "    GROUP BY a.called_station_id " +
         ") " +
         "SELECT " +
         "    s.ap_id, " +
-        "    COUNT(DISTINCT s.acctsessionid) AS total_sessions, " +
-        "    SUM(s.bandwidth) AS total_bandwidth, " +
-        "    AVG(s.duration_seconds) AS avg_session_duration_seconds " +
-        "FROM sessions s " +
-        "GROUP BY s.ap_id " +
-        "ORDER BY total_bandwidth DESC",
+        "    s.total_sessions, " +
+        "    s.total_bandwidth, " +
+        "    s.avg_session_duration_seconds, " +
+        "    lr.long, " +
+        "    lr.lat " +
+        "FROM ap_sessions s " +
+        "LEFT JOIN latest_routers lr " +
+        "    ON UPPER(split_part(s.ap_id, chr(58), 1)) = UPPER(lr.mac_address) " + //chr(58) is colon (:)
+        "WHERE s.last_seen >= NOW() - interval '7 days' " +
+        "ORDER BY s.total_bandwidth DESC",
         nativeQuery = true)
-    List<Object[]> findAllActiveApForThePast7Days();
+    List<Object[]> findAllActiveApWithLocationForThePast7Days(); // Modified query to include location data from Routers table
             
     @Query(value =
         "WITH sessions AS (" +
@@ -501,7 +604,7 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "        a.acctsessiontime AS duration_seconds " +
         "    FROM accounting a " +
         "    WHERE a.called_station_id = :apId " +
-        "      AND TO_TIMESTAMP(a.time_stamp) >= NOW() - interval '7 days' " +
+        // "      AND TO_TIMESTAMP(a.time_stamp) >= NOW() - interval '7 days' " + //findAllActiveApForThePast7DaysByApId
         "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
         ") " +
         "SELECT " +
@@ -515,81 +618,110 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "GROUP BY ap_id, username " +
         "ORDER BY total_bandwidth DESC ",
         nativeQuery = true)
-    List<Object[]> findAllActiveApForThePast7DaysByApId(@Param("apId") String apId);
+    // List<Object[]> findAllActiveApForThePast7DaysByApId(@Param("apId") String apId);
+    List<Object[]> findAllActiveOrInActiveApForThePast7DaysByApId(@Param("apId") String apId);
 
     @Query(value =
-        "WITH valid_sessions AS ( " +
-        "    SELECT called_station_id AS ap_id, acctsessionid " +
-        "    FROM accounting " +
-        "    GROUP BY called_station_id, acctsessionid " +
-        "    HAVING MAX(TO_TIMESTAMP(time_stamp)) < NOW() - interval '7 days' " +
+        "WITH ap_sessions AS ( " +
+        "    SELECT " +
+        "        a.called_station_id AS ap_id, " +
+        "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen " +
+        "    FROM accounting a " +
+        "    GROUP BY a.called_station_id " +
         ") " +
-        "SELECT COUNT(*) AS total_aps " +
-        "FROM ( " +
-        "    SELECT DISTINCT ap_id " +
-        "    FROM valid_sessions " +
-        ") AS aps",
+        "SELECT COUNT(*) AS active_ap_count " +
+        "FROM ap_sessions " +
+        "WHERE last_seen < NOW() - interval '7 days'",
         nativeQuery = true)
     Long countAllInActiveApForMoreThan7Days();
         
+    // @Query(value =
+    //     "WITH ap_sessions AS ( " +
+    //     "    SELECT " +
+    //     "        a.called_station_id AS ap_id, " +
+    //     "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen, " +
+    //     "        COUNT(DISTINCT a.acctsessionid) AS total_sessions, " +
+    //     "        SUM(a.acctinputoctets + a.acctoutputoctets) AS total_bandwidth, " +
+    //     "        AVG(a.acctsessiontime) AS avg_session_duration_seconds " +
+    //     "    FROM accounting a " +
+    //     "    GROUP BY a.called_station_id " +
+    //     ") " +
+    //     "SELECT " +
+    //     "    ap_id, " +
+    //     "    total_sessions, " +
+    //     "    total_bandwidth, " +
+    //     "    avg_session_duration_seconds " +
+    //     "FROM ap_sessions " +
+    //     "WHERE last_seen < NOW() - interval '7 days' " +
+    //     "ORDER BY total_bandwidth DESC",
+    //     nativeQuery = true)
+    // List<Object[]> findAllInActiveApForMoreThan7Days();
     @Query(value =
-        "WITH sessions AS ( " +
-        "    SELECT DISTINCT ON (a.acctsessionid, a.called_station_id) " +
+        "WITH latest_routers AS ( " +
+        "    SELECT DISTINCT ON (UPPER(r.mac_address)) r.* " +
+        "    FROM \"Routers\" r " +
+        "    ORDER BY UPPER(r.mac_address), r.created_at DESC " +
+        "), " +
+        "ap_sessions AS ( " +
+        "    SELECT " +
         "        a.called_station_id AS ap_id, " +
-        "        a.acctsessionid, " +
-        "        TO_TIMESTAMP(a.start_time) AS start_time, " +
-        "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
-        "        (a.acctinputoctets + a.acctoutputoctets) AS bandwidth, " +
-        "        a.acctsessiontime AS duration_seconds " +
+        "        MAX(TO_TIMESTAMP(a.time_stamp)) AS last_seen, " +
+        "        COUNT(DISTINCT a.acctsessionid) AS total_sessions, " +
+        "        SUM(a.acctinputoctets + a.acctoutputoctets) AS total_bandwidth, " +
+        "        AVG(a.acctsessiontime) AS avg_session_duration_seconds " +
         "    FROM accounting a " +
-        "    WHERE TO_TIMESTAMP(a.time_stamp) < NOW() - interval '7 days' " +
-        "    ORDER BY a.acctsessionid, a.called_station_id, a.time_stamp DESC " +
+        "    GROUP BY a.called_station_id " +
         ") " +
         "SELECT " +
         "    s.ap_id, " +
-        "    COUNT(DISTINCT s.acctsessionid) AS total_sessions, " +
-        "    SUM(s.bandwidth) AS total_bandwidth, " +
-        "    AVG(s.duration_seconds) AS avg_session_duration_seconds " +
-        "FROM sessions s " +
-        "GROUP BY s.ap_id " +
-        "ORDER BY total_bandwidth DESC",
+        "    s.total_sessions, " +
+        "    s.total_bandwidth, " +
+        "    s.avg_session_duration_seconds, " +
+        "    lr.long, " +
+        "    lr.lat " +
+        "FROM ap_sessions s " +
+        "LEFT JOIN latest_routers lr " +
+        "    ON UPPER(split_part(s.ap_id, chr(58), 1)) = UPPER(lr.mac_address) " + //chr(58) is colon (:)
+        "WHERE s.last_seen < NOW() - interval '7 days' " +
+        "ORDER BY s.total_bandwidth DESC",
         nativeQuery = true)
-    List<Object[]> findAllInActiveApForMoreThan7Days();
+    List<Object[]> findAllInActiveApWithLocationForMoreThan7Days(); // Modified query to include location data from Routers table
 
-    @Query(value =
-        "WITH sessions AS (" +
-        "    SELECT DISTINCT ON (a.acctsessionid)" +
-        "        a.called_station_id AS ap_id, " +
-        "        a.username, " +
-        "        a.acctsessionid, " +
-        "        a.start_time AS start_time, " +
-        "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
-        "        (a.acctinputoctets + a.acctoutputoctets) AS bandwidth, " +
-        "        a.acctsessiontime AS duration_seconds " +
-        "    FROM accounting a " +
-        "    WHERE a.called_station_id = :apId " +
-        "      AND TO_TIMESTAMP(a.time_stamp) < NOW() - interval '7 days' " +
-        "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
-        ") " +
-        "SELECT " +
-        "    ap_id, " +
-        "    username, " +
-        "    COUNT(acctsessionid) AS total_sessions, " +
-        "    SUM(duration_seconds) AS total_time_seconds, " +
-        "    SUM(bandwidth) AS total_bandwidth, " +
-        "    AVG(duration_seconds) AS avg_session_length_seconds " +
-        "FROM sessions " +
-        "GROUP BY ap_id, username " +
-        "ORDER BY total_bandwidth DESC ",
-        nativeQuery = true)
-    List<Object[]> findAllInActiveApForThePast7DaysByApId(@Param("apId") String apId);
+    // @Query(value =
+    //     "WITH sessions AS (" +
+    //     "    SELECT DISTINCT ON (a.acctsessionid)" +
+    //     "        a.called_station_id AS ap_id, " +
+    //     "        a.username, " +
+    //     "        a.acctsessionid, " +
+    //     "        a.start_time AS start_time, " +
+    //     "        TO_TIMESTAMP(a.time_stamp) AS last_update, " +
+    //     "        (a.acctinputoctets + a.acctoutputoctets) AS bandwidth, " +
+    //     "        a.acctsessiontime AS duration_seconds " +
+    //     "    FROM accounting a " +
+    //     "    WHERE a.called_station_id = :apId " +
+    //     // "      AND TO_TIMESTAMP(a.time_stamp) < NOW() - interval '7 days' " +
+    //     "    ORDER BY a.acctsessionid, a.time_stamp DESC " +
+    //     ") " +
+    //     "SELECT " +
+    //     "    ap_id, " +
+    //     "    username, " +
+    //     "    COUNT(acctsessionid) AS total_sessions, " +
+    //     "    SUM(duration_seconds) AS total_time_seconds, " +
+    //     "    SUM(bandwidth) AS total_bandwidth, " +
+    //     "    AVG(duration_seconds) AS avg_session_length_seconds " +
+    //     "FROM sessions " +
+    //     "GROUP BY ap_id, username " +
+    //     "ORDER BY total_bandwidth DESC ",
+    //     nativeQuery = true)
+    // List<Object[]> findAllInActiveApForThePast7DaysByApId(@Param("apId") String apId);
+    // This query is commented out because we are now using findAllActiveOrInActiveApForThePast7DaysByApId
 
     @Query(value =
         "SELECT " +
         "   a.called_station_id, " +
         "   COALESCE( " +
         "       TO_TIMESTAMP(a.start_time), " +
-        "       MIN(CASE WHEN a.acctstatustype = 'Start' THEN TO_TIMESTAMP(a.time_stamp) END) " +
+        "       MIN(CASE WHEN a.acctstatustype IN ('Start', 'Alive') THEN TO_TIMESTAMP(a.time_stamp) END) " +
         "   ) AS start_time, " +
         "   MAX(TO_TIMESTAMP(a.time_stamp)) AS latest_time " +
         "FROM accounting a " +
@@ -598,6 +730,14 @@ public interface AccountingRepository extends JpaRepository<Accounting, String> 
         "ORDER BY a.called_station_id, a.time_stamp DESC",
         nativeQuery = true)
     List<Object[]> findAllTimestampsByApId(@Param("apId") List<String> apId);
+    
+    @Query(value =
+        "SELECT " +
+        "   TO_TIMESTAMP(a.time_stamp) AS latest_time " +
+        "FROM accounting a " +
+        "WHERE a.acctsessionid = :sessionId ORDER BY a.time_stamp ASC LIMIT 1",
+        nativeQuery = true)
+    Timestamp findTimestampStartTimeBySessionId(@Param("sessionId") String sessionId);
 
 }
 
