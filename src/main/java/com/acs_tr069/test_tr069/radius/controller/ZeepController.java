@@ -1,7 +1,6 @@
 package com.acs_tr069.test_tr069.radius.controller;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,9 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.acs_tr069.test_tr069.radius.entity.ApAccounting;
 import com.acs_tr069.test_tr069.radius.entity.Subscribers;
-import com.acs_tr069.test_tr069.radius.repository.ApAccountingRepository;
 import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -34,86 +31,6 @@ public class ZeepController {
 
     @Autowired
     private SubscriberRepository subscriberRepo;
-    @Autowired
-    private ApAccountingRepository apAccountingRepo;
-
-    @GetMapping(path = "/retrieveApData")
-    public ResponseEntity<?> fetchApAccountingData(@RequestParam String serialNumber)
-            throws JsonMappingException, JsonProcessingException, InterruptedException {
-        if (serialNumber == null || serialNumber.trim().isEmpty()) {
-            return new ResponseEntity<>("Serial number is missing/invalid", HttpStatus.BAD_REQUEST);
-        }
-        serialNumber = serialNumber.trim();
-        try {
-            Optional<ApAccounting> optionalDevice = apAccountingRepo.findBySerialNum(serialNumber);
-            if (!optionalDevice.isPresent()) {
-                return new ResponseEntity<>("Device not found", HttpStatus.NOT_FOUND);
-            }
-            ApAccounting device = optionalDevice.get();
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("serialNumber", device.getSerialNum());
-            response.put("calledStationId", device.getCalledStationId());
-            response.put("totalInputOctets", device.getTotalInputOctets());
-            response.put("totalOutputOctets", device.getTotalOutputOctets());
-            response.put("totalSessionTime", device.getTotalSessionTime());
-            response.put("provisionedDate", device.getCreatedOn());
-            response.put("lastResetDate", device.getLastReset());
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            String errorMessage = "Failed to retrieve device accounting details. " + e.getMessage();
-            return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @PostMapping(path = "/resetApData")
-    public ResponseEntity<?> renewApAccountingData(@RequestBody Map<String, String> params)
-            throws JsonMappingException, JsonProcessingException, InterruptedException {
-        if (params == null) {
-            return new ResponseEntity<>("Invalid input", HttpStatus.BAD_REQUEST);
-        }
-
-        try {
-            String serialNumber = params.get("serialNumber");
-            if (serialNumber == null || serialNumber.trim().isEmpty()) {
-                return new ResponseEntity<>("Serial number is missing/invalid", HttpStatus.BAD_REQUEST);
-            }
-            serialNumber = serialNumber.trim();
-
-            Optional<ApAccounting> optionalDevice = apAccountingRepo.findBySerialNum(serialNumber);
-            if (!optionalDevice.isPresent()) {
-                return new ResponseEntity<>("Device not found", HttpStatus.NOT_FOUND);
-            }
-            OffsetDateTime currenttimetz = OffsetDateTime.now();
-            ApAccounting device = optionalDevice.get();
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("serialNumber", device.getSerialNum());
-            response.put("calledStationId", device.getCalledStationId());
-            response.put("totalInputOctets", device.getTotalInputOctets());
-            response.put("totalOutputOctets", device.getTotalOutputOctets());
-            response.put("totalSessionTime", device.getTotalSessionTime());
-            response.put("provisionedDate", device.getCreatedOn());
-            response.put("previousResetDate", device.getLastReset() != null ? device.getLastReset() : "Never Reset");
-            response.put("currentResetDate", currenttimetz);
-
-            device.setTotalInputOctets(0L);
-            device.setTotalOutputOctets(0L);
-            device.setTotalSessionTime(0L);
-            device.setLastReset(currenttimetz);
-            apAccountingRepo.save(device);
-
-            Map<String, Object> finalResponse = new HashMap<>();
-            finalResponse.put("message", "Successfully reset device accounting details");
-            finalResponse.put("data", response);
-
-            return ResponseEntity.ok(finalResponse);
-        } catch (Exception e) {
-            String errorMessage = "Failed to reset device accounting details. " + e.getMessage();
-            return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
     @GetMapping(path = "/verifyAccount")
     public ResponseEntity<?> validateSubscriber(@RequestParam String username)
@@ -137,9 +54,6 @@ public class ZeepController {
             response.put("bytesLimit", subscriber.getBytesLimit());
             response.put("remainingBytes", subscriber.getRemainingBytes());
             response.put("status", subscriber.getStatus());
-            response.put("maxUprate", subscriber.getMaxUprate());
-            response.put("maxDownrate", subscriber.getMaxDownrate());
-            response.put("registrationDate", subscriber.getRegistrationDate());
 
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
@@ -163,8 +77,6 @@ public class ZeepController {
                     response.put("bytesLimit", account.getBytesLimit());
                     response.put("remainingBytes", account.getRemainingBytes());
                     response.put("status", account.getStatus());
-                    response.put("maxUprate", account.getMaxUprate());
-                    response.put("maxDownrate", account.getMaxDownrate());
                     response.put("registrationDate", account.getRegistrationDate());
                     return response;
                 }).collect(Collectors.toList());
@@ -259,9 +171,9 @@ public class ZeepController {
 
             if (maxuprateStr != null && !maxuprateStr.trim().isEmpty()) {
                 try {
-                    double maxUpRateMb = Double.parseDouble(maxuprateStr.trim());
-                    if (maxUpRateMb > 0) {
-                        maxuprate = (long) (maxUpRateMb * 1000); // MB to KB conversion
+                    maxuprate = Long.parseLong(maxuprateStr.trim());
+                    if (maxuprate <= 0) {
+                        maxuprate = null;
                     }
                 } catch (NumberFormatException e) {
                     // do nothing
@@ -270,9 +182,9 @@ public class ZeepController {
 
             if (maxdownrateStr != null && !maxdownrateStr.trim().isEmpty()) {
                 try {
-                    double maxDownRateMb = Double.parseDouble(maxdownrateStr.trim());
-                    if (maxDownRateMb > 0) {
-                        maxdownrate = (long) (maxDownRateMb * 1000); // MB to KB conversion
+                    maxdownrate = Long.parseLong(maxdownrateStr.trim());
+                    if (maxdownrate <= 0) {
+                        maxdownrate = null;
                     }
                 } catch (NumberFormatException e) {
                     // do nothing
@@ -308,42 +220,45 @@ public class ZeepController {
 
     @PostMapping(path = "/topupBytes")
     public ResponseEntity<?> addBytes(@RequestBody Map<String, String> params)
-            throws InterruptedException {
+            throws JsonMappingException, JsonProcessingException, InterruptedException {
         if (params == null) {
             return new ResponseEntity<>("Invalid input", HttpStatus.BAD_REQUEST);
         }
-        String username = params.get("username");
-        String valueStr = params.get("value");
-
-        if (username == null || username.isEmpty()) {
-            return new ResponseEntity<>("Username is missing/invalid", HttpStatus.BAD_REQUEST);
-        }
-        username = username.trim();
-
-        if (valueStr == null || valueStr.trim().isEmpty()) {
-            return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
-        }
-
-        Long valueBytes = null;
         try {
-            double valueMb = Double.parseDouble(valueStr.trim());
-            if (valueMb <= 0) {
-                return ResponseEntity.badRequest().body("Value must be greater than 0");
+            String username = params.get("username");
+            String valueStr = params.get("value");
+
+            if (username == null || username.isEmpty()) {
+                return new ResponseEntity<>("Username is missing/invalid", HttpStatus.BAD_REQUEST);
             }
-            valueBytes = (long) (valueMb * 1_000_000); // Convert MB to bytes
-        } catch (NumberFormatException e) {
-            return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
-        }
+            username = username.trim();
 
-        try {
+            if (valueStr == null || valueStr.trim().isEmpty()) {
+                return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            long value = 0;
+            try {
+                value = Long.parseLong(valueStr.trim());
+                if (value <= 0) {
+                    return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
+                }
+            } catch (NumberFormatException e) {
+                return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
+            }
+
             Optional<Subscribers> optionalSubscriber = subscriberRepo.findByUsername(username);
             if (!optionalSubscriber.isPresent()) {
                 return new ResponseEntity<>("Account not found", HttpStatus.NOT_FOUND);
             }
 
             Subscribers subscriber = optionalSubscriber.get();
-            subscriberRepo.addRemainingBytes(valueBytes, subscriber.getUsername());
-            return ResponseEntity.ok("Additional bytes have been credited");
+            long currentBytesLeft = Optional.ofNullable(subscriber.getRemainingBytes()).orElse(0L);
+            long updatedBytesLeft = currentBytesLeft + value;
+
+            subscriber.setRemainingBytes(updatedBytesLeft);
+            subscriberRepo.save(subscriber);
+            return new ResponseEntity<>("Additional bytes has been added", HttpStatus.OK);
 
         } catch (Exception e) {
             String errorMessage = "Failed to increase remaining bytes. " + e.getMessage();
@@ -370,11 +285,11 @@ public class ZeepController {
                 return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
             }
 
-            long valueTime = 0;
+            long value = 0;
 
             try {
-                valueTime = Long.parseLong(valueStr.trim());
-                if (valueTime <= 0) {
+                value = Long.parseLong(valueStr.trim());
+                if (value <= 0) {
                     return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
                 }
             } catch (NumberFormatException e) {
@@ -387,7 +302,11 @@ public class ZeepController {
             }
 
             Subscribers subscriber = optionalSubscriber.get();
-            subscriberRepo.addRemainingTime(valueTime, subscriber.getUsername());
+            Long currentTimeLeft = Optional.ofNullable(subscriber.getRemainingSessionTime()).orElse(0L);
+            long updatedTimeLeft = currentTimeLeft + value;
+
+            subscriber.setRemainingSessionTime(updatedTimeLeft);
+            subscriberRepo.save(subscriber);
             return new ResponseEntity<>("Additional time has been added", HttpStatus.OK);
 
         } catch (Exception e) {
