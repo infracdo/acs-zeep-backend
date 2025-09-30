@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - zeep-talos-backend-prod # Trigger on pushes to the main branch
+      - zeep-backend-prod-backup2 # Trigger on pushes to the main branch
   #pull_request:  # Trigger on pull requests
 
 jobs:
