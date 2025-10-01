@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.acs_tr069.test_tr069.radius.entity.ApAccounting;
 import com.acs_tr069.test_tr069.radius.entity.Subscribers;
+import com.acs_tr069.test_tr069.radius.entity.SubscribersDTO;
 import com.acs_tr069.test_tr069.radius.repository.ApAccountingRepository;
 import com.acs_tr069.test_tr069.radius.repository.SubscriberRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -180,57 +181,53 @@ public class ZeepController {
     }
 
     @PostMapping(path = "/registerAccount")
-    public ResponseEntity<?> addSubscriber(@RequestBody Subscribers subscriber) {
+    public ResponseEntity<?> addSubscriber(@RequestBody SubscribersDTO subscriberDTO) {
         try {
-            if (subscriber.getUsername() == null || subscriber.getUsername().trim().isEmpty()) {
-                return new ResponseEntity<>("Username is missing/invalid", HttpStatus.BAD_REQUEST);
+            subscriberDTO = trimAllStrings(subscriberDTO); // trim given values
+
+            // check if received data is valid
+            // deny if username is not valid
+            String username = subscriberDTO.getUsername();
+            if (username == null || username.isEmpty()) {
+                return new ResponseEntity<>("Username is missing", HttpStatus.BAD_REQUEST);
             }
-
-            subscriber.setUsername(subscriber.getUsername().trim());
-
-            if (subscriber.getPassword() == null || subscriber.getPassword().isEmpty()) {
-                return new ResponseEntity<>("Password is missing/invalid", HttpStatus.BAD_REQUEST);
+            // deny if password is not valid
+            if (subscriberDTO.getPassword() == null || subscriberDTO.getPassword().isEmpty()) {
+                return new ResponseEntity<>("Password is missing", HttpStatus.BAD_REQUEST);
             }
-
-            if (subscriber.getSessionLimit() == null || subscriber.getSessionLimit() < 0) {
-                subscriber.setSessionLimit(0);
-            }
-
-            if (subscriber.getRemainingSessionTime() != null && subscriber.getRemainingSessionTime() < 0) {
+            // deny if remaining session time is negative
+            if (subscriberDTO.getRemainingSessionTime() != null && subscriberDTO.getRemainingSessionTime() < 0) {
                 return new ResponseEntity<>("Remaining time is invalid", HttpStatus.BAD_REQUEST);
             }
-
-            if (subscriber.getBytesLimit() != null && subscriber.getBytesLimit() < 0) {
+            // deny if bytes limit is negative
+            if (subscriberDTO.getBytesLimit() != null && subscriberDTO.getBytesLimit() < 0) {
                 return new ResponseEntity<>("Bytes limit is invalid", HttpStatus.BAD_REQUEST);
             }
-
-            if (subscriber.getRemainingBytes() != null && subscriber.getRemainingBytes() < 0) {
+            // deny if remaining bytes is negative
+            if (subscriberDTO.getRemainingBytes() != null && subscriberDTO.getRemainingBytes() < 0) {
                 return new ResponseEntity<>("Remaining bytes is invalid", HttpStatus.BAD_REQUEST);
             }
-
-            if (subscriber.getStatus() == null) {
-                subscriber.setStatus(0);
+            // deny if status is neither 0 nor 1
+            if (subscriberDTO.getStatus() != null && subscriberDTO.getStatus() != 0 && subscriberDTO.getStatus() != 1) {
+                return new ResponseEntity<>("Status is invalid", HttpStatus.BAD_REQUEST);
+            }
+            // deny if bytes limit is negative
+            if (subscriberDTO.getMaxUprate() != null && subscriberDTO.getMaxUprate() < 0) {
+                return new ResponseEntity<>("Maximum uprate is invalid", HttpStatus.BAD_REQUEST);
+            }
+            // deny if remaining bytes is negative
+            if (subscriberDTO.getMaxDownrate() != null && subscriberDTO.getMaxDownrate() < 0) {
+                return new ResponseEntity<>("Maximum downrate is invalid", HttpStatus.BAD_REQUEST);
             }
 
-            if (subscriber.getStatus() != 0 && subscriber.getStatus() != 1) {
-                return new ResponseEntity<>("Status is missing/invalid", HttpStatus.BAD_REQUEST);
-            }
-
-            Optional<Subscribers> optionalSubscriber = subscriberRepo.findByUsername(subscriber.getUsername());
+            Optional<Subscribers> optionalSubscriber = subscriberRepo.findByUsername(subscriberDTO.getUsername());
             if (optionalSubscriber.isPresent()) {
                 return new ResponseEntity<>("Account already exists", HttpStatus.CONFLICT);
             }
 
-            subscriber.setLname("default");
-            subscriber.setFname("default");
-            subscriber.setAddress("unknown");
-            subscriber.setPhoneNo("0000000000");
-            subscriber.setBirthdate(LocalDate.now());
-            subscriber.setGender("N/A");
-            subscriber.setRegistrationDate(LocalDate.now().toString());
-
+            Subscribers subscriber = convertDtoToEntity(subscriberDTO);
             subscriberRepo.save(subscriber);
-            return new ResponseEntity<>("Account has been registered", HttpStatus.CREATED);
+            return new ResponseEntity<>("Account has been created", HttpStatus.CREATED);
 
         } catch (Exception e) {
             String errorMessage = "Failed to register account. " + e.getMessage();
@@ -330,7 +327,7 @@ public class ZeepController {
             if (valueMb <= 0) {
                 return ResponseEntity.badRequest().body("Value must be greater than 0");
             }
-            valueBytes = (long) (valueMb * 1_000_000); // Convert MB to bytes
+            valueBytes = (long) (valueMb * 1000000); // Convert MB to bytes
         } catch (NumberFormatException e) {
             return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
         }
@@ -524,4 +521,91 @@ public class ZeepController {
             return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    private Subscribers convertDtoToEntity(SubscribersDTO dto) {
+        Subscribers entity = new Subscribers();
+        // set null values to default
+        if (dto.getSessionLimit() == null) {
+            dto.setSessionLimit(2880000); // set default as 2880000 seconds
+        }
+        if (dto.getRemainingSessionTime() == null) {
+            dto.setRemainingSessionTime(3600); // set default as 3600 seconds
+        }
+        if (dto.getBytesLimit() == null) {
+            dto.setBytesLimit(50000.0); // set default as 50000mb(50gb)
+        }
+        if (dto.getRemainingBytes() == null) {
+            dto.setRemainingBytes(50000.0); // set default as 50000mb(50gb)
+        }
+        if (isNullOrEmpty(dto.getLname())) {
+            dto.setLname("N/A");
+        }
+        if (isNullOrEmpty(dto.getFname())) {
+            dto.setFname("N/A");
+        }
+        if (isNullOrEmpty(dto.getAddress())) {
+            dto.setAddress("N/A");
+        }
+        if (isNullOrEmpty(dto.getPhoneNo())) {
+            dto.setPhoneNo("N/A");
+        }
+        if (dto.getBirthdate() == null) {
+            // dto.setBirthdate(LocalDate.now()); // ALLOW NULL
+        }
+        if (isNullOrEmpty(dto.getGender())) {
+            dto.setGender("N/A");
+        }
+        if (dto.getStatus() == null) {
+            dto.setStatus(0); // set default as disabled
+        }
+        if (dto.getMaxUprate() == null) {
+            dto.setMaxUprate(50.0);
+        }
+        if (dto.getMaxDownrate() == null) {
+            dto.setMaxDownrate(50.0);
+        }
+
+        // convert to subscriber entity
+        entity.setUsername(dto.getUsername());
+        entity.setPassword(dto.getPassword());
+        entity.setSessionLimit(dto.getSessionLimit());
+        entity.setRemainingSessionTime(dto.getRemainingSessionTime());
+        entity.setBytesLimit((long) (dto.getBytesLimit() * 1000000));
+        entity.setRemainingBytes((long) (dto.getRemainingBytes() * 1000000));
+        entity.setLname(dto.getLname());
+        entity.setFname(dto.getFname());
+        entity.setMname(dto.getMname());
+        entity.setEname(dto.getEname());
+        entity.setAddress(dto.getAddress());
+        entity.setPhoneNo(dto.getPhoneNo());
+        entity.setBirthdate(dto.getBirthdate());
+        entity.setGender(dto.getGender());
+        entity.setStatus(dto.getStatus());
+        entity.setRegistrationDate(LocalDate.now().toString());
+        entity.setMaxUprate((long) (dto.getMaxUprate() * 1000));
+        entity.setMaxDownrate((long) (dto.getMaxDownrate() * 1000));
+
+        return entity;
+    }
+
+    private boolean isNullOrEmpty(String str) {
+        return str == null || str.trim().isEmpty();
+    }
+
+    private String safeTrim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private SubscribersDTO trimAllStrings(SubscribersDTO dto) {
+        dto.setUsername(safeTrim(dto.getUsername()));
+        dto.setLname(safeTrim(dto.getLname()));
+        dto.setFname(safeTrim(dto.getFname()));
+        dto.setMname(safeTrim(dto.getMname()));
+        dto.setEname(safeTrim(dto.getEname()));
+        dto.setAddress(safeTrim(dto.getAddress()));
+        dto.setPhoneNo(safeTrim(dto.getPhoneNo()));
+        dto.setGender(safeTrim(dto.getGender()));
+        return dto;
+    }
+
 }

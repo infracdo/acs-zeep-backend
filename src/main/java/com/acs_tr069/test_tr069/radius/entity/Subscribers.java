@@ -31,7 +31,7 @@ public class Subscribers {
     private Integer sessionLimit;
 
     @Column(name = "remaining_session_time")
-    private Long remainingSessionTime;
+    private Integer remainingSessionTime;
 
     @Column(name = "bytes_limit")
     private Long bytesLimit;
