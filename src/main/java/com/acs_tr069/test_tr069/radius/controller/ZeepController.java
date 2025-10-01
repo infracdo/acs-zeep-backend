@@ -58,8 +58,8 @@ public class ZeepController {
             response.put("totalInputOctets", device.getTotalInputOctets());
             response.put("totalOutputOctets", device.getTotalOutputOctets());
             response.put("totalSessionTime", device.getTotalSessionTime());
-            response.put("provisionedDate", device.getCreatedOn());
-            response.put("lastResetDate", device.getLastReset());
+            response.put("createdOn", device.getCreatedOn());
+            response.put("lastReset", device.getLastReset());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
