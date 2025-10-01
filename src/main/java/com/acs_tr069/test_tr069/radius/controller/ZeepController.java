@@ -535,7 +535,7 @@ public class ZeepController {
             dto.setBytesLimit(50000.0); // set default as 50000mb(50gb)
         }
         if (dto.getRemainingBytes() == null) {
-            dto.setRemainingBytes(50.0); // set default as 50mb
+            dto.setRemainingBytes(50000.0); // set default as 50000mb(50gb)
         }
         if (isNullOrEmpty(dto.getLname())) {
             dto.setLname("N/A");
