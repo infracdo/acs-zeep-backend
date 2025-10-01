@@ -33,6 +33,86 @@ public class ZeepController {
 
     @Autowired
     private SubscriberRepository subscriberRepo;
+    @Autowired
+    private ApAccountingRepository apAccountingRepo;
+
+    @GetMapping(path = "/retrieveApData")
+    public ResponseEntity<?> fetchApAccountingData(@RequestParam String serialNumber)
+            throws JsonMappingException, JsonProcessingException, InterruptedException {
+        if (serialNumber == null || serialNumber.trim().isEmpty()) {
+            return new ResponseEntity<>("Serial number is missing/invalid", HttpStatus.BAD_REQUEST);
+        }
+        serialNumber = serialNumber.trim();
+        try {
+            Optional<ApAccounting> optionalDevice = apAccountingRepo.findBySerialNum(serialNumber);
+            if (!optionalDevice.isPresent()) {
+                return new ResponseEntity<>("Device not found", HttpStatus.NOT_FOUND);
+            }
+            ApAccounting device = optionalDevice.get();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("serialNumber", device.getSerialNum());
+            response.put("calledStationId", device.getCalledStationId());
+            response.put("totalInputOctets", device.getTotalInputOctets());
+            response.put("totalOutputOctets", device.getTotalOutputOctets());
+            response.put("totalSessionTime", device.getTotalSessionTime());
+            response.put("createdOn", device.getCreatedOn());
+            response.put("lastReset", device.getLastReset());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            String errorMessage = "Failed to retrieve device accounting details. " + e.getMessage();
+            return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping(path = "/resetApData")
+    public ResponseEntity<?> renewApAccountingData(@RequestBody Map<String, String> params)
+            throws JsonMappingException, JsonProcessingException, InterruptedException {
+        if (params == null) {
+            return new ResponseEntity<>("Invalid input", HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            String serialNumber = params.get("serialNumber");
+            if (serialNumber == null || serialNumber.trim().isEmpty()) {
+                return new ResponseEntity<>("Serial number is missing/invalid", HttpStatus.BAD_REQUEST);
+            }
+            serialNumber = serialNumber.trim();
+
+            Optional<ApAccounting> optionalDevice = apAccountingRepo.findBySerialNum(serialNumber);
+            if (!optionalDevice.isPresent()) {
+                return new ResponseEntity<>("Device not found", HttpStatus.NOT_FOUND);
+            }
+            OffsetDateTime currenttimetz = OffsetDateTime.now();
+            ApAccounting device = optionalDevice.get();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("serialNumber", device.getSerialNum());
+            response.put("calledStationId", device.getCalledStationId());
+            response.put("totalInputOctets", device.getTotalInputOctets());
+            response.put("totalOutputOctets", device.getTotalOutputOctets());
+            response.put("totalSessionTime", device.getTotalSessionTime());
+            response.put("provisionedDate", device.getCreatedOn());
+            response.put("previousResetDate", device.getLastReset() != null ? device.getLastReset() : "Never Reset");
+            response.put("currentResetDate", currenttimetz);
+
+            device.setTotalInputOctets(0L);
+            device.setTotalOutputOctets(0L);
+            device.setTotalSessionTime(0L);
+            device.setLastReset(currenttimetz);
+            apAccountingRepo.save(device);
+
+            Map<String, Object> finalResponse = new HashMap<>();
+            finalResponse.put("message", "Successfully reset device accounting details");
+            finalResponse.put("data", response);
+
+            return ResponseEntity.ok(finalResponse);
+        } catch (Exception e) {
+            String errorMessage = "Failed to reset device accounting details. " + e.getMessage();
+            return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     @GetMapping(path = "/verifyAccount")
     public ResponseEntity<?> validateSubscriber(@RequestParam String username)
