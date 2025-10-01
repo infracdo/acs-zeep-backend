@@ -1,7 +1,6 @@
 package com.acs_tr069.test_tr069.radius.controller;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -184,9 +183,7 @@ public class ZeepController {
     @PostMapping(path = "/registerAccount")
     public ResponseEntity<?> addSubscriber(@RequestBody SubscribersDTO subscriberDTO) {
         try {
-            System.out.println("username " + subscriberDTO.getUsername());
-            trimAllStrings(subscriberDTO); // trim given values
-            System.out.println("username after trimming " + subscriberDTO.getUsername());
+            subscriberDTO = trimAllStrings(subscriberDTO); // trim given values
 
             // check if received data is valid
             // deny if username is not valid
@@ -230,7 +227,7 @@ public class ZeepController {
 
             Subscribers subscriber = convertDtoToEntity(subscriberDTO);
             subscriberRepo.save(subscriber);
-            return new ResponseEntity<>("Account has been registered", HttpStatus.CREATED);
+            return new ResponseEntity<>("Account has been created", HttpStatus.CREATED);
 
         } catch (Exception e) {
             String errorMessage = "Failed to register account. " + e.getMessage();
@@ -330,7 +327,7 @@ public class ZeepController {
             if (valueMb <= 0) {
                 return ResponseEntity.badRequest().body("Value must be greater than 0");
             }
-            valueBytes = (long) (valueMb * 1_000_000); // Convert MB to bytes
+            valueBytes = (long) (valueMb * 1000000); // Convert MB to bytes
         } catch (NumberFormatException e) {
             return new ResponseEntity<>("Value is missing/invalid", HttpStatus.BAD_REQUEST);
         }
@@ -567,13 +564,14 @@ public class ZeepController {
         if (dto.getMaxDownrate() == null) {
             dto.setMaxDownrate(50.0);
         }
+
         // convert to subscriber entity
         entity.setUsername(dto.getUsername());
         entity.setPassword(dto.getPassword());
         entity.setSessionLimit(dto.getSessionLimit());
         entity.setRemainingSessionTime(dto.getRemainingSessionTime());
-        entity.setBytesLimit((long) (dto.getBytesLimit() * 1_000_000));
-        entity.setRemainingBytes((long) (dto.getRemainingBytes() * 1_000_000));
+        entity.setBytesLimit((long) (dto.getBytesLimit() * 1000000));
+        entity.setRemainingBytes((long) (dto.getRemainingBytes() * 1000000));
         entity.setLname(dto.getLname());
         entity.setFname(dto.getFname());
         entity.setMname(dto.getMname());
@@ -584,8 +582,9 @@ public class ZeepController {
         entity.setGender(dto.getGender());
         entity.setStatus(dto.getStatus());
         entity.setRegistrationDate(LocalDate.now().toString());
-        entity.setMaxUprate((long) (dto.getMaxUprate() * 1_000_000));
-        entity.setMaxDownrate((long) (dto.getMaxDownrate() * 1_000_000));
+        entity.setMaxUprate((long) (dto.getMaxUprate() * 1000));
+        entity.setMaxDownrate((long) (dto.getMaxDownrate() * 1000));
+
         return entity;
     }
 
@@ -597,7 +596,7 @@ public class ZeepController {
         return s == null ? null : s.trim();
     }
 
-    private void trimAllStrings(SubscribersDTO dto) {
+    private SubscribersDTO trimAllStrings(SubscribersDTO dto) {
         dto.setUsername(safeTrim(dto.getUsername()));
         dto.setLname(safeTrim(dto.getLname()));
         dto.setFname(safeTrim(dto.getFname()));
@@ -606,6 +605,7 @@ public class ZeepController {
         dto.setAddress(safeTrim(dto.getAddress()));
         dto.setPhoneNo(safeTrim(dto.getPhoneNo()));
         dto.setGender(safeTrim(dto.getGender()));
+        return dto;
     }
 
 }
