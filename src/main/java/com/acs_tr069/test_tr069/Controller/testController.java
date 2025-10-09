@@ -138,28 +138,28 @@ public class testController {
     }
 
     /*
-    public void setup() throws SocketException{
-        System.out.println("UDP server start");
-        new udp_server().start();
-    }
-    
-    @Scheduled(fixedDelay = 1000)
-    public void StartUDP() throws SocketException{
-        System.out.println("UDP server start");
-        new udp_server().start();
-    }
-    */
-    
+     * public void setup() throws SocketException{
+     * System.out.println("UDP server start");
+     * new udp_server().start();
+     * }
+     * 
+     * @Scheduled(fixedDelay = 1000)
+     * public void StartUDP() throws SocketException{
+     * System.out.println("UDP server start");
+     * new udp_server().start();
+     * }
+     */
+
     @PostMapping(value = "/")
     public DeferredResult<ResponseEntity<String>> TestDevice(@RequestBody(required = false) String xmlPayload,
             HttpServletRequest request, HttpServletResponse response) {
-        System.out.println("xml payload: "+xmlPayload);
+        System.out.println("xml payload: " + xmlPayload);
         String headers = Collections.list(request.getHeaderNames()).stream()
-        .map(name -> name + ": " + request.getHeader(name))
-        .collect(Collectors.joining(", ", "Request Headers: {", "}"));
+                .map(name -> name + ": " + request.getHeader(name))
+                .collect(Collectors.joining(", ", "Request Headers: {", "}"));
 
         System.out.println("request headers: " + headers);
-        //System.out.println("Start: " + LocalTime.now());
+        // System.out.println("Start: " + LocalTime.now());
         DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
         String DeviceSerialNum = null;
         if (xmlPayload != null) {
@@ -178,7 +178,7 @@ public class testController {
         } else {
             DeviceSerialNum = GetDeviceSerialNum(request);
         }
-        //System.out.println("DeviceThatRequest" + DeviceSerialNum);
+        // System.out.println("DeviceThatRequest" + DeviceSerialNum);
 
         new Thread(() -> {
 
@@ -197,8 +197,8 @@ public class testController {
                 } catch (SOAPException e) {
                     e.printStackTrace();
                 }
-                System.out.println("ResponseType: "+ getResponsetype);
-                //getResponsetype = converteBody.getChildNodes().item(0).getLocalName();
+                System.out.println("ResponseType: " + getResponsetype);
+                // getResponsetype = converteBody.getChildNodes().item(0).getLocalName();
 
                 if (xmlPayload.contains("<cwmp:Inform>")) {
 
@@ -209,9 +209,9 @@ public class testController {
                     response.addHeader("Set-Cookie", "session=" + SNCookie);
                     responsebody = tr069response.InformResponse();
 
-                    //System.out.println("End: " + LocalTime.now());
+                    // System.out.println("End: " + LocalTime.now());
                     device check_device = device_front.getBySerialNum(SN);
-                    if(check_device == null){
+                    if (check_device == null) {
                         try {
                             UpdateDevicesTable(xmlPayload);
                         } catch (JSONException e) {
@@ -219,28 +219,29 @@ public class testController {
                         }
                         result.setResult(ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.TEXT_XML)
                                 .body(null));
-                    }
-                    else {
+                    } else {
                         CheckDeviceEventCode(xmlPayload);
                         result.setResult(ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_XML)
                                 .body(responsebody));
                     }
                 }
-                //System.out.println(GetResponseResult.getResult(converteBody, getResponsetype));
+                // System.out.println(GetResponseResult.getResult(converteBody,
+                // getResponsetype));
 
                 if (xmlPayload.contains("<cwmp:X_RUIJIE_COM_CN_ExecuteCliCommandResponse>")) {
 
                     String DeviceSN = GetDeviceSerialNum(request);
                     String CommandUsed = converteBody.getElementsByTagName("Command").item(0).getTextContent();
-                    String WebCliContent = GetResponseResult.getResult(converteBody, "X_RUIJIE_COM_CN_ExecuteCliCommandResponse");
-                    System.out.println("Recieved CLI Response: "+ new Timestamp(System.currentTimeMillis()));
+                    String WebCliContent = GetResponseResult.getResult(converteBody,
+                            "X_RUIJIE_COM_CN_ExecuteCliCommandResponse");
+                    System.out.println("Recieved CLI Response: " + new Timestamp(System.currentTimeMillis()));
                     if (WebCliContent.matches("none") == false) {
                         SaveWebCLIOutput(WebCliContent, CommandUsed, DeviceSN);
                     }
                 }
 
                 if (xmlPayload.contains("<cwmp:GetParameterNamesResponse>")) {
-                    //System.out.println(getResponsetype);
+                    // System.out.println(getResponsetype);
                     String DeviceSN = GetDeviceSerialNum(request);
                     LogRequest("GetParameterNames", xmlPayload, DeviceSN);
                     // async_method.LogRequest("GetParameterNames", xmlPayload, DeviceSN);
@@ -272,7 +273,7 @@ public class testController {
                             // taskhandlerRepo.delete(taskhandlerRepo.getByID(id+2));
                             // taskhandlerRepo.delete(taskhandlerRepo.getByID(id+3));
 
-                            //System.out.println("End: " + LocalTime.now());
+                            // System.out.println("End: " + LocalTime.now());
 
                             result.setResult(ResponseEntity.status(HttpStatus.NO_CONTENT)
                                     .contentType(MediaType.TEXT_XML).body(" "));
@@ -288,7 +289,7 @@ public class testController {
                             taskhandlerRepo.delete(taskhandlerRepo.getByID(id + 2));
                             taskhandlerRepo.delete(taskhandlerRepo.getByID(id + 3));
 
-                            //System.out.println("End: " + LocalTime.now());
+                            // System.out.println("End: " + LocalTime.now());
 
                             result.setResult(ResponseEntity.status(HttpStatus.NO_CONTENT)
                                     .contentType(MediaType.TEXT_XML).body(" "));
@@ -300,24 +301,23 @@ public class testController {
 
                 taskhandlerRepo.delete(taskhandlerRepo.getByID(id));
 
-                //System.out.println("End: " + LocalTime.now());
+                // System.out.println("End: " + LocalTime.now());
 
                 result.setResult(
                         ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_XML).body(responsebody));
-            }
-            else{
+            } else {
                 try {
                     SendUDPRequest(DeviceSN);
                 } catch (IOException e) {
                     e.printStackTrace();
                     System.out.println(e);
                 }
-                result.setResult(ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.TEXT_XML).body(null));
+                result.setResult(
+                        ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.TEXT_XML).body(null));
             }
 
-            //System.out.println("End: " + LocalTime.now());
+            // System.out.println("End: " + LocalTime.now());
 
-            
         }, "MyThread for " + DeviceSerialNum).start();
 
         return result;
@@ -325,7 +325,7 @@ public class testController {
 
     public void LogRequest(String Method, String Payload, String serial_num) {
         new Thread(() -> {
-            //System.out.println(Payload);
+            // System.out.println(Payload);
             cpe_response_log newCPE_log = new cpe_response_log();
             newCPE_log.set_Method(Method);
             newCPE_log.set_Payload(Payload);
@@ -336,7 +336,8 @@ public class testController {
     }
 
     public void CheckDeviceEventCode(String Payload) {
-        //System.out.println(LocalTime.now() + "Current Thread: " + Thread.currentThread().getName());
+        // System.out.println(LocalTime.now() + "Current Thread: " +
+        // Thread.currentThread().getName());
         new Thread(() -> {
             SOAPBody soapBody = null;
             Integer NumEvent = 0;
@@ -354,8 +355,8 @@ public class testController {
             }
             NumEvent = soapBody.getElementsByTagName("Event").item(0).getChildNodes().getLength();
             String serial_num = soapBody.getElementsByTagName("SerialNumber").item(0).getTextContent();
-            
-            /*Update device time*/
+
+            /* Update device time */
             httprequestlog logRequest = httplogreqRepo.getBySerialNumEquals(serial_num);
             logRequest.set_lastRequest(new Timestamp(System.currentTimeMillis()));
             httplogreqRepo.save(logRequest);
@@ -363,14 +364,14 @@ public class testController {
             for (int i = 0; i < NumEvent; i++) {
                 String EventCode = soapBody.getElementsByTagName("Event").item(0).getChildNodes().item(i)
                         .getChildNodes().item(0).getTextContent();
-                //System.out.println("EventCode" + EventCode);
+                // System.out.println("EventCode" + EventCode);
                 if (EventCode.contains("BOOT")) {
                     String ObjectName = "{,Command:macc nat-config vlan 233 network 10.233.2.0 255.255.255.0,Command:interface BVI 233,Command:ip address 10.233.2.1 255.255.255.0,Command:ip nat inside,Command:end,Command:write,}";
                     SaveTask(serial_num, "Command", ObjectName, "config");
 
                     device device = device_front.getBySerialNum(serial_num);
                     String deviceGroup = device.getparent();
-                    if(!deviceGroup.matches("unassigned")){
+                    if (!deviceGroup.matches("unassigned")) {
                         String[] Devicesgroups = deviceGroup.split("/");
                         for (int k = 1; k < (Devicesgroups.length + 1); k++) {
                             StringBuilder sb = new StringBuilder();
@@ -379,7 +380,7 @@ public class testController {
                                     sb.append("/" + Devicesgroups[j - 1]);
                                 }
                             }
-                            //System.out.println("Group Device:" + sb.toString());
+                            // System.out.println("Group Device:" + sb.toString());
                             AddOldSSID(serial_num, sb.toString());
                             ApplyOldCommand(serial_num, sb.toString());
                         }
@@ -396,8 +397,9 @@ public class testController {
                         SaveTask(serial_num, "Command", ObjectName, "config");
                     } else {
                         device device_to_bootstrap = device_front.getBySerialNum(serial_num);
-                        if(!device_to_bootstrap.getparent().matches("unassigned")){
-                            System.out.println("bootstraping via checkdeviceeventcode for device " + device_to_bootstrap.getserial_number());
+                        if (!device_to_bootstrap.getparent().matches("unassigned")) {
+                            System.out.println("bootstraping via checkdeviceeventcode for device "
+                                    + device_to_bootstrap.getserial_number());
                             if (!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())) {
                                 device_to_bootstrap.setstatus("syncing");
                                 device_front.save(device_to_bootstrap);
@@ -414,10 +416,10 @@ public class testController {
                         e.printStackTrace();
                     }
                     /*
-                    httprequestlog logRequest = httplogreqRepo.getBySerialNumEquals(serial_num);
-                    logRequest.set_lastRequest(new Timestamp(System.currentTimeMillis()));
-                    httplogreqRepo.save(logRequest);
-                    */
+                     * httprequestlog logRequest = httplogreqRepo.getBySerialNumEquals(serial_num);
+                     * logRequest.set_lastRequest(new Timestamp(System.currentTimeMillis()));
+                     * httplogreqRepo.save(logRequest);
+                     */
                 }
             }
         }, "CheckEvent").start();
@@ -426,7 +428,7 @@ public class testController {
     public void Bootstraping(String serial_num) {
         new Thread(() -> {
             // search and destroy accesspoint objects
-            //System.out.println("Starting Delete AP process: " + serial_num);
+            // System.out.println("Starting Delete AP process: " + serial_num);
             SaveTask(serial_num, "GetParameterNames", "Device.WiFi.AccessPoint.", "null");
             SaveTask(serial_num, "GetParameterValues", "Device.WiFi.AccessPoint.", "null");
             Integer num_ap = -1;
@@ -454,9 +456,9 @@ public class testController {
                 DeleteMultipleObjects(serial_num, apTobeDelete, num_ap);
             }
 
-            //System.out.println("Deleting AP: " + serial_num);
+            // System.out.println("Deleting AP: " + serial_num);
 
-            //System.out.println("Starting Delet SSID process: " + serial_num);
+            // System.out.println("Starting Delet SSID process: " + serial_num);
             // search and destroy ssid objects
             SaveTask(serial_num, "GetParameterNames", "Device.WiFi.SSID.", "null");
             SaveTask(serial_num, "GetParameterValues", "Device.WiFi.SSID.", "null");
@@ -485,10 +487,10 @@ public class testController {
             }
             // SaveTask(serial_num, "GetParameterValues", "Device.WiFi.SSID.", "null");
 
-            //System.out.println("Deleting SSID: " + serial_num);
+            // System.out.println("Deleting SSID: " + serial_num);
 
             // Create ssid and accesspoint based on the device's group
-            //System.out.println("ADDOldSSID");
+            // System.out.println("ADDOldSSID");
 
             device device = device_front.getBySerialNum(serial_num);
             String deviceGroup = device.getparent();
@@ -500,7 +502,7 @@ public class testController {
                         sb.append("/" + Devicesgroups[j - 1]);
                     }
                 }
-                //System.out.println("Group Device:" + sb.toString());
+                // System.out.println("Group Device:" + sb.toString());
                 AddOldSSID(serial_num, sb.toString());
                 ApplyOldCommand(serial_num, sb.toString());
             }
@@ -539,10 +541,11 @@ public class testController {
                     System.out.println("Radius Response: " + radiusResponse);
 
                     device_to_bootstrap.setstatus("synced");
-                    device_to_bootstrap.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+                    device_to_bootstrap.setdate_modified(
+                            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
                     device_front.save(device_to_bootstrap);
                     System.out.println("finished bootstrapping for device " + serial_num);
-                    
+
                     break;
                 }
             }
@@ -575,10 +578,10 @@ public class testController {
         } catch (Exception e) {
             cpe_response = null;
         }
-        //System.out.println(cpe_response);
-        if(cpe_response == null){
+        // System.out.println(cpe_response);
+        if (cpe_response == null) {
             return "None";
-        }else{
+        } else {
             if (cpe_response.get_method().contains(Method)) {
                 SOAPBody soapBody = null;
                 try {
@@ -587,11 +590,12 @@ public class testController {
                     e.printStackTrace();
                 }
                 Integer numOfParam = soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
-                System.out.println("Number of parameters for " + Method + " for device " + serial_num + " is " + numOfParam);
+                System.out.println(
+                        "Number of parameters for " + Method + " for device " + serial_num + " is " + numOfParam);
                 if (numOfParam == 0) {
                     return "zero";
                 } else {
-                    //System.out.println(soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().item(0).getChildNodes().item(0).getTextContent());
+                    // System.out.println(soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().item(0).getChildNodes().item(0).getTextContent());
                     StringBuilder result = new StringBuilder();
                     for (int j = 0; j < numOfParam; j++) {
                         result.append(soapBody.getElementsByTagName("ParameterList").item(0).getChildNodes().item(j)
@@ -624,7 +628,7 @@ public class testController {
             String encryptionMode = null;
             String encrypModetoConvert = currentSsid.getencryption_mode();
 
-            //System.out.println("EncryptionMode: " + encrypModetoConvert);
+            // System.out.println("EncryptionMode: " + encrypModetoConvert);
 
             if (encrypModetoConvert.contains("Open")) {
                 encryptionMode = "None";
@@ -657,7 +661,7 @@ public class testController {
             } else {
                 SSIDSettings.append(",}");
             }
-            //System.out.println("SSID-Settings: " + SSIDSettings.toString());
+            // System.out.println("SSID-Settings: " + SSIDSettings.toString());
             AddNewSSID(SSIDSettings.toString(), serial_num, wlan_id.toString());
 
             if (currentSsid.getauth()) {
@@ -708,11 +712,11 @@ public class testController {
 
         // String currentCookie = request.getHeader("Cookie").split(",")[0];
         String currentCookie = Collections.list(request.getHeaderNames()).stream()
-        .filter(h -> h.equalsIgnoreCase("cookie"))
-        .map(request::getHeader)
-        .findFirst()
-        .map(c -> c.split(";")[0])
-        .orElse(null);
+                .filter(h -> h.equalsIgnoreCase("cookie"))
+                .map(request::getHeader)
+                .findFirst()
+                .map(c -> c.split(";")[0])
+                .orElse(null);
 
         String DeviceSN = null;
         if (httplogreqRepo.findByCookie(currentCookie).isEmpty() == false) {
@@ -724,7 +728,7 @@ public class testController {
 
     private String FindSiteByName(String site) { // checks if site name exists, returns site id or error message
         try {
-            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + site + "&tenant_id=16";
+            String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/sites/?name=" + site + "&tenant_id=3";
             String netboxAuthToken = env.getProperty("netbox.auth.token");
             System.out.println("URL: " + netboxApiUrl);
 
@@ -739,8 +743,7 @@ public class testController {
                     netboxApiUrl,
                     HttpMethod.GET,
                     entity,
-                    String.class
-                );
+                    String.class);
 
             if (response.getStatusCodeValue() == 200) {
                 try {
@@ -749,9 +752,9 @@ public class testController {
                     if (results.length() > 0) {
                         int id = results.getJSONObject(0).getInt("id");
                         System.out.println("found site id for " + site + id);
-                        return String.valueOf(id);  
+                        return String.valueOf(id);
                     } else {
-                        return "ERROR NOT FOUND"; 
+                        return "ERROR NOT FOUND";
                     }
                 } catch (JSONException e) {
                     return "JSON ERROR";
@@ -778,17 +781,18 @@ public class testController {
 
             requestBody.put("name", site);
             requestBody.put("slug", site);
-            requestBody.put("tenant", 16);
+            requestBody.put("tenant", 3);
             requestBody.put("status", "active");
             requestBody.put("description", "Access Points located at " + site);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
             RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity,
+                    String.class);
 
             System.out.println("create site response body " + response.getBody());
-            
+
             if (response.getStatusCode().is2xxSuccessful()) {
                 try {
                     JSONObject json = new JSONObject(response.getBody());
@@ -798,10 +802,10 @@ public class testController {
                 } catch (JSONException e) {
                     return "SITE CREATION JSON ERROR";
                 }
-            } 
+            }
             return "SITE CREATION REQUEST ERROR " + response.getStatusCodeValue();
         } catch (Exception e) {
-            return "UNEXPECTED ERROR " + e.getMessage(); 
+            return "UNEXPECTED ERROR " + e.getMessage();
         }
     }
 
@@ -826,7 +830,8 @@ public class testController {
                     String parent = deviceparent.substring(0, i);
                     group = deviceparent.substring(i + 1);
 
-                    Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group); // check if group exists
+                    Optional<groups> optionalGroup = group_repo.findByParentAndGroup(parent, group); // check if group
+                                                                                                     // exists
                     if (optionalGroup.isPresent()) {
                         site = optionalGroup.get().getlocation(); // gets location of group
                     } else {
@@ -856,7 +861,7 @@ public class testController {
             }
             siteId = Integer.valueOf(siteIdAsString);
 
-            // CREATE DEVICE 
+            // CREATE DEVICE
             String netboxApiUrl = env.getProperty("netbox.api.url") + "/api/dcim/devices/";
             String netboxAuthToken = env.getProperty("netbox.auth.token");
 
@@ -866,11 +871,11 @@ public class testController {
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("name", deviceData.getdevice_name());
-            requestBody.put("device_role", 3);
-            requestBody.put("device_type", 105);
+            requestBody.put("role", 4);
+            requestBody.put("device_type", 121);
             requestBody.put("serial_number", deviceData.getserial_number());
             requestBody.put("site", siteId);
-            requestBody.put("tenant", 16);
+            requestBody.put("tenant", 3);
             requestBody.put("status", "active");
 
             Map<String, Object> customFields = new HashMap<>();
@@ -881,11 +886,13 @@ public class testController {
 
             RestTemplate restTemplate = new RestTemplate();
             System.out.println("sending device creation request to netbox " + deviceData.getserial_number());
-            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(netboxApiUrl, HttpMethod.POST, requestEntity,
+                    String.class);
 
             System.out.println("response body " + response.getBody());
             int status = response.getStatusCodeValue();
-            return (status >= 200 && status < 300) ? "Device added successfully" : "ERROR DEVICE CREATION FAILED " + status;
+            return (status >= 200 && status < 300) ? "Device added successfully"
+                    : "ERROR DEVICE CREATION FAILED " + status;
         } catch (Exception e) {
             return "ERROR " + e.getMessage();
         }
@@ -899,35 +906,38 @@ public class testController {
             Optional<device> optionalDevice = device_front.findById(id); // check if device exists
             if (optionalDevice.isPresent()) {
                 deviceData = optionalDevice.get(); // retrieve device details
-                // Optional<group_command> optionalCommand = GroupCommandRepo.findZeepTemplateByParent(deviceData.getparent());
+                // Optional<group_command> optionalCommand =
+                // GroupCommandRepo.findZeepTemplateByParent(deviceData.getparent());
                 // if (optionalCommand.isPresent()) {
-                //     group_command commandData = optionalCommand.get();
-                //     String template = commandData.getcommand();
-                //     Pattern pattern = Pattern.compile("dot11 wlan 2\\s*\\r?\\n\\s*ssid\\s+(.+)", Pattern.CASE_INSENSITIVE);
-                //     Matcher matcher = pattern.matcher(template);
-                //     if (matcher.find()) {
-                //         ssid = matcher.group(1).trim(); // returns "MyNetworkName"
-                //     } else {
-                //         return "ERROR ssid not found";
-                //     }
+                // group_command commandData = optionalCommand.get();
+                // String template = commandData.getcommand();
+                // Pattern pattern = Pattern.compile("dot11 wlan 2\\s*\\r?\\n\\s*ssid\\s+(.+)",
+                // Pattern.CASE_INSENSITIVE);
+                // Matcher matcher = pattern.matcher(template);
+                // if (matcher.find()) {
+                // ssid = matcher.group(1).trim(); // returns "MyNetworkName"
                 // } else {
-                //     return "ERROR command not found";
+                // return "ERROR ssid not found";
+                // }
+                // } else {
+                // return "ERROR command not found";
                 // }
             } else {
                 return "ERROR device not found";
             }
-            
+
             // if (ssid == null) {
-            //     return "ERROR device ssid not found";
+            // return "ERROR device ssid not found";
             // }
 
-            if (deviceData.getmac_address() == null  || deviceData.getmac_address().trim().isEmpty()) {
+            if (deviceData.getmac_address() == null || deviceData.getmac_address().trim().isEmpty()) {
                 return "ERROR device mac not found";
             }
 
             String calledStationId = deviceData.getmac_address().replaceAll("[:\\-\\s]", "").toLowerCase();
             System.out.println("calledStationId: " + calledStationId);
-            Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository.findByCalledStationId(calledStationId);
+            Optional<AllowedNasMacAddress> optionalAddress = allowedNasMacAddressRepository
+                    .findByCalledStationId(calledStationId);
 
             String returnMessage = "";
             if (!optionalAddress.isPresent()) {
@@ -939,10 +949,10 @@ public class testController {
             } else {
                 returnMessage = "Mac address already exists in Allowed NAS Mac Address table. ";
             }
-            
+
             Optional<ApAccounting> optionalApAccounting = apAccountingRepository.findByCalledStationId(calledStationId);
 
-            if(!optionalApAccounting.isPresent()){
+            if (!optionalApAccounting.isPresent()) {
                 ApAccounting newApAccounting = new ApAccounting();
                 newApAccounting.setCalledStationId(calledStationId);
                 newApAccounting.setCreatedOn(OffsetDateTime.now());
@@ -953,7 +963,7 @@ public class testController {
                 newApAccounting.setTotalSessionTime(0L);
                 apAccountingRepository.save(newApAccounting);
                 returnMessage += "- Mac address added successfully in AP Accounting table";
-            }else{
+            } else {
                 returnMessage += "- Mac address already exists in AP Accounting table";
             }
             return returnMessage;
@@ -964,329 +974,363 @@ public class testController {
 
     // @Scheduled(fixedRate = 60000)
     // private void ZabbixAPI_Test() throws IOException, JSONException {
-    //     /*
-    //         item type 4 is text
-    //         item type 0 is numeric(float)
-    //     */
-    //     new Thread(()->{
-    //         if (!appReady) {
-    //             System.out.println("Skipping scheduled run of ZabbixAPI_Test, app not ready");
-    //             return;  // Skip running before initialization
-    //         }
-    //         String group_id = "213";
-    //         URL zabbix_url = null;
-    //         try {
-    //             zabbix_url = new URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
-    //         } catch (MalformedURLException e2) {
-    //             // TODO Auto-generated catch block
-    //             e2.printStackTrace();
-    //         }
-    //         String auth = null;
-    //         try {
-    //             auth = zabbixRPC.Authentication(zabbix_url);
-    //         } catch (IOException e2) {
-    //             // TODO Auto-generated catch block
-    //             e2.printStackTrace();
-    //         } catch (JSONException e2) {
-    //             // TODO Auto-generated catch block
-    //             e2.printStackTrace();
-    //         }
-    
-            
-    //         Iterable<device> device_list = device_front.findAll();
-    //         for (device device : device_list) {
-    //             String device_name = device.getdevice_name();
-    //             String hostid = null;
-    //             try {
-    //                 hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
-    //             } catch (IOException e2) {
-    //                 // TODO Auto-generated catch block
-    //                 e2.printStackTrace();
-    //             } catch (JSONException e2) {
-    //                 // TODO Auto-generated catch block
-    //                 e2.printStackTrace();
-    //             }
-    //             System.out.println("host id: " + hostid);
-    //             if(device.getstatus()!=null){
-    //                 if(device.getstatus().matches("offline")){
-    //                     //System.out.println(hostid);
-    //                     if(hostid != null){
-    //                         JSONArray items = null;
-    //                         try {
-    //                             items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-    //                         } catch (IOException e1) {
-    //                             // TODO Auto-generated catch block
-    //                             e1.printStackTrace();
-    //                         } catch (JSONException e1) {
-    //                             // TODO Auto-generated catch block
-    //                             e1.printStackTrace();
-    //                         }
-    //                         StringBuilder ItemsInHost = new StringBuilder();
-    //                         if(items != null){
-    //                             for(int i=0;i<items.length();i++){
-    //                                 JSONObject current_item = null;
-    //                                 try {
-    //                                     current_item = items.getJSONObject(i);
-    //                                 } catch (JSONException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                                 String itemkey = "null";
-    //                                 try {
-    //                                     itemkey = current_item.get("key_").toString();
-    //                                 } catch (JSONException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                                 ItemsInHost.append( itemkey + ";");
-    //                             }
-    //                             if(ItemsInHost.toString().contains("device.status")){
-    //                                 try {
-    //                                     zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-    //                                 } catch (IOException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                             }else{
-    //                                 try {
-    //                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                                 } catch (IOException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 } catch (JSONException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                             }
-    //                         }else{
-    //                             try {
-    //                                 zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                             } catch (IOException e) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e.printStackTrace();
-    //                             } catch (JSONException e) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e.printStackTrace();
-    //                             }
-    //                         }
-    //                     }
-    //                     else{
-    //                         try {
-    //                             zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-    //                         } catch (IOException e) {
-    //                             // TODO Auto-generated catch block
-    //                             e.printStackTrace();
-    //                         } catch (JSONException e) {
-    //                             // TODO Auto-generated catch block
-    //                             e.printStackTrace();
-    //                         }
-    //                     }
-    //                     httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
-    //                     currentlog.set_device_status(device.getstatus());
-    //                     httplogreqRepo.save(currentlog);
-    //                 }
-    //                 if(device.getstatus().matches("online")){
-    //                     httprequestlog currentlog = httplogreqRepo.getBySerialNumEquals(device.getserial_number());
-        
-    //                     if(currentlog.get_device_status() == null){
-    //                         currentlog.set_device_status(device.getstatus());
-    //                         httplogreqRepo.save(currentlog);
-    //                         //System.out.println(hostid);
-    //                         if(hostid != null){
-    //                             JSONArray items = null;
-    //                             try {
-    //                                 items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-    //                             } catch (IOException e1) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e1.printStackTrace();
-    //                             } catch (JSONException e1) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e1.printStackTrace();
-    //                             }
-    //                             StringBuilder ItemsInHost = new StringBuilder();
-    //                             if(items != null){
-    //                                 for(int i=0;i<items.length();i++){
-    //                                     JSONObject current_item = null;
-    //                                     try {
-    //                                         current_item = items.getJSONObject(i);
-    //                                     } catch (JSONException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     }
-    //                                     String itemkey = "null";
-    //                                     try {
-    //                                         itemkey = current_item.get("key_").toString();
-    //                                     } catch (JSONException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     }
-    //                                     ItemsInHost.append( itemkey + ";");
-    //                                 }
-    //                                 if(ItemsInHost.toString().contains("device.status")){
-    //                                     try {
-    //                                         zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-    //                                     } catch (IOException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     }
-    //                                 }else{
-    //                                     try {
-    //                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                                     } catch (IOException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     } catch (JSONException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     }
-    //                                 }
-    //                             }else{
-    //                                 try {
-    //                                     zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                                 } catch (IOException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 } catch (JSONException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                             }
-    //                         }
-    //                         else{
-    //                             try {
-    //                                 zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-    //                             } catch (IOException e) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e.printStackTrace();
-    //                             } catch (JSONException e) {
-    //                                 // TODO Auto-generated catch block
-    //                                 e.printStackTrace();
-    //                             }
-    //                         }
-    
-    //                     }else{
-    //                         if(currentlog.get_device_status().matches(device.getstatus()) == false){
-    //                             currentlog.set_device_status(device.getstatus());
-    //                             httplogreqRepo.save(currentlog);
-    //                             if(hostid != null){
-    //                                 JSONArray items = null;
-    //                                 try {
-    //                                     items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
-    //                                 } catch (IOException e1) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e1.printStackTrace();
-    //                                 } catch (JSONException e1) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e1.printStackTrace();
-    //                                 }
-    //                                 StringBuilder ItemsInHost = new StringBuilder();
-    //                                 if(items != null){
-    //                                     for(int i=0;i<items.length();i++){
-    //                                         JSONObject current_item = null;
-    //                                         try {
-    //                                             current_item = items.getJSONObject(i);
-    //                                         } catch (JSONException e) {
-    //                                             // TODO Auto-generated catch block
-    //                                             e.printStackTrace();
-    //                                         }
-    //                                         String itemkey = "null";
-    //                                         try {
-    //                                             itemkey = current_item.get("key_").toString();
-    //                                         } catch (JSONException e) {
-    //                                             // TODO Auto-generated catch block
-    //                                             e.printStackTrace();
-    //                                         }
-    //                                         ItemsInHost.append( itemkey + ";");
-    //                                     }
-    //                                     if(ItemsInHost.toString().contains("device.status")){
-    //                                         try {
-    //                                             zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
-    //                                         } catch (IOException e) {
-    //                                             // TODO Auto-generated catch block
-    //                                             e.printStackTrace();
-    //                                         }
-    //                                     }else{
-    //                                         try {
-    //                                             zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                                         } catch (IOException e) {
-    //                                             // TODO Auto-generated catch block
-    //                                             e.printStackTrace();
-    //                                         } catch (JSONException e) {
-    //                                             // TODO Auto-generated catch block
-    //                                             e.printStackTrace();
-    //                                         }
-    //                                     }
-    //                                 }else{
-    //                                     try {
-    //                                         zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth, zabbix_url);
-    //                                     } catch (IOException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     } catch (JSONException e) {
-    //                                         // TODO Auto-generated catch block
-    //                                         e.printStackTrace();
-    //                                     }
-    //                                 }
-    //                             }
-    //                             else{
-    //                                 try {
-    //                                     zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id, auth);
-    //                                 } catch (IOException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 } catch (JSONException e) {
-    //                                     // TODO Auto-generated catch block
-    //                                     e.printStackTrace();
-    //                                 }
-    //                             }
-    //                         }
-    //                     }
-    //                     currentlog.set_device_status(device.getstatus());
-    //                     httplogreqRepo.save(currentlog);
-    //                 }
-    //             }   
-    //         }
-    //     }).start();
+    // /*
+    // item type 4 is text
+    // item type 0 is numeric(float)
+    // */
+    // new Thread(()->{
+    // if (!appReady) {
+    // System.out.println("Skipping scheduled run of ZabbixAPI_Test, app not
+    // ready");
+    // return; // Skip running before initialization
+    // }
+    // String group_id = "213";
+    // URL zabbix_url = null;
+    // try {
+    // zabbix_url = new
+    // URL("http://zabbix.apolloglobal.net/zabbix/api_jsonrpc.php");
+    // } catch (MalformedURLException e2) {
+    // // TODO Auto-generated catch block
+    // e2.printStackTrace();
+    // }
+    // String auth = null;
+    // try {
+    // auth = zabbixRPC.Authentication(zabbix_url);
+    // } catch (IOException e2) {
+    // // TODO Auto-generated catch block
+    // e2.printStackTrace();
+    // } catch (JSONException e2) {
+    // // TODO Auto-generated catch block
+    // e2.printStackTrace();
+    // }
 
-        
-        
+    // Iterable<device> device_list = device_front.findAll();
+    // for (device device : device_list) {
+    // String device_name = device.getdevice_name();
+    // String hostid = null;
+    // try {
+    // hostid = zabbixRPC.GetSpecificHost(device_name, auth, zabbix_url);
+    // } catch (IOException e2) {
+    // // TODO Auto-generated catch block
+    // e2.printStackTrace();
+    // } catch (JSONException e2) {
+    // // TODO Auto-generated catch block
+    // e2.printStackTrace();
+    // }
+    // System.out.println("host id: " + hostid);
+    // if(device.getstatus()!=null){
+    // if(device.getstatus().matches("offline")){
+    // //System.out.println(hostid);
+    // if(hostid != null){
+    // JSONArray items = null;
+    // try {
+    // items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    // } catch (IOException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // } catch (JSONException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // }
+    // StringBuilder ItemsInHost = new StringBuilder();
+    // if(items != null){
+    // for(int i=0;i<items.length();i++){
+    // JSONObject current_item = null;
+    // try {
+    // current_item = items.getJSONObject(i);
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // String itemkey = "null";
+    // try {
+    // itemkey = current_item.get("key_").toString();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // ItemsInHost.append( itemkey + ";");
+    // }
+    // if(ItemsInHost.toString().contains("device.status")){
+    // try {
+    // zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+    // else{
+    // try {
+    // zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id,
+    // auth);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // httprequestlog currentlog =
+    // httplogreqRepo.getBySerialNumEquals(device.getserial_number());
+    // currentlog.set_device_status(device.getstatus());
+    // httplogreqRepo.save(currentlog);
+    // }
+    // if(device.getstatus().matches("online")){
+    // httprequestlog currentlog =
+    // httplogreqRepo.getBySerialNumEquals(device.getserial_number());
 
-    //     //zabbixRPC.UpdateItem("ACS_ZabbixAPI_Test", "create_item_test", "Testingsszzas");
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"output\": [\"hostid\",\"host\",\"tags\",\"macros\"],\"selectInterfaces\": [\"interfaceid\",\"ip\"]},\"id\": 2,\"auth\": \""+auth+"\"}";
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [[\"itemid\", \"name\", \"key_\"]]},\"id\": 1,\"auth\": \""+auth+"\"}";
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.update\",\"params\": {\"itemid\": \"567105\",\"lastvalue\": test},\"auth\": \""+auth+"\",\"id\": 5}";
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": [\"itemid\", \"name\", \"key_\",\"lastvalue\",\"interface\"],\"selectPreprocessing\": \"extend\",\"hostids\": \"27053\"},\"auth\": \""+auth+"\",\"id\": 1}";
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27044\",\"search\": {\"key_\": \"devicesstatus\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
- 
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\"},\"search\": {\"key_\": \"test\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
-        
-    //     //Get items
-    //     //String message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\": \"27053\",\"search\": {\"key_\": \"\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    // if(currentlog.get_device_status() == null){
+    // currentlog.set_device_status(device.getstatus());
+    // httplogreqRepo.save(currentlog);
+    // //System.out.println(hostid);
+    // if(hostid != null){
+    // JSONArray items = null;
+    // try {
+    // items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    // } catch (IOException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // } catch (JSONException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // }
+    // StringBuilder ItemsInHost = new StringBuilder();
+    // if(items != null){
+    // for(int i=0;i<items.length();i++){
+    // JSONObject current_item = null;
+    // try {
+    // current_item = items.getJSONObject(i);
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // String itemkey = "null";
+    // try {
+    // itemkey = current_item.get("key_").toString();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // ItemsInHost.append( itemkey + ";");
+    // }
+    // if(ItemsInHost.toString().contains("device.status")){
+    // try {
+    // zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+    // else{
+    // try {
+    // zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id,
+    // auth);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
 
-    //     //zabbixRPC.Testing(message, auth, zabbix_url);
-    //     //message = "{\"jsonrpc\": \"2.0\",\"request\":\"sender data\",\"data\":[{\"host\":\"ACS_ZabbixAPI_Test\",\"key\":\"trapper\",\"value\":\"test value\"}],\"auth\": \""+auth+"\",\"id\": 1}";
-    //     //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\": {\"filter\":{\"host\":\"ACS_ZabbixAPI_Test\"}},\"id\": 2,\"auth\": \""+auth+"\"}";
-        
-    //     //GetZabbixHost(message, zabbix_url);
+    // }else{
+    // if(currentlog.get_device_status().matches(device.getstatus()) == false){
+    // currentlog.set_device_status(device.getstatus());
+    // httplogreqRepo.save(currentlog);
+    // if(hostid != null){
+    // JSONArray items = null;
+    // try {
+    // items = zabbixRPC.GetItems(hostid, auth, zabbix_url);
+    // } catch (IOException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // } catch (JSONException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // }
+    // StringBuilder ItemsInHost = new StringBuilder();
+    // if(items != null){
+    // for(int i=0;i<items.length();i++){
+    // JSONObject current_item = null;
+    // try {
+    // current_item = items.getJSONObject(i);
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // String itemkey = "null";
+    // try {
+    // itemkey = current_item.get("key_").toString();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // ItemsInHost.append( itemkey + ";");
+    // }
+    // if(ItemsInHost.toString().contains("device.status")){
+    // try {
+    // zabbixRPC.UpdateItem(device_name, "device.status", device.getstatus());
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }else{
+    // try {
+    // zabbixRPC.CreateItem(hostid, "DeviceStatus", "device.status", auth,
+    // zabbix_url);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+    // else{
+    // try {
+    // zabbixRPC.CreateZabbixHost(zabbix_url, device_name, "202.60.10.89", group_id,
+    // auth);
+    // } catch (IOException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (JSONException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+    // }
+    // currentlog.set_device_status(device.getstatus());
+    // httplogreqRepo.save(currentlog);
+    // }
+    // }
+    // }
+    // }).start();
 
-    //     //UpdateItem();
+    // //zabbixRPC.UpdateItem("ACS_ZabbixAPI_Test", "create_item_test",
+    // "Testingsszzas");
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\":
+    // {\"output\": [\"hostid\",\"host\",\"tags\",\"macros\"],\"selectInterfaces\":
+    // [\"interfaceid\",\"ip\"]},\"id\": 2,\"auth\": \""+auth+"\"}";
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\":
+    // {\"output\": [[\"itemid\", \"name\", \"key_\"]]},\"id\": 1,\"auth\":
+    // \""+auth+"\"}";
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.update\",\"params\":
+    // {\"itemid\": \"567105\",\"lastvalue\": test},\"auth\": \""+auth+"\",\"id\":
+    // 5}";
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\":
+    // {\"output\": [\"itemid\", \"name\",
+    // \"key_\",\"lastvalue\",\"interface\"],\"selectPreprocessing\":
+    // \"extend\",\"hostids\": \"27053\"},\"auth\": \""+auth+"\",\"id\": 1}";
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\":
+    // {\"output\": \"extend\",\"hostids\": \"27044\",\"search\": {\"key_\":
+    // \"devicesstatus\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\":
+    // 1}";
+
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"item.get\",\"params\":
+    // {\"output\": \"extend\",\"hostids\": \"27053\"},\"search\": {\"key_\":
+    // \"test\"},\"sortfield\": \"name\"},\"auth\": \""+auth+"\",\"id\": 1}";
+
+    // //Get items
+    // //String message = "{\"jsonrpc\": \"2.0\",\"method\":
+    // \"item.get\",\"params\": {\"output\": \"extend\",\"hostids\":
+    // \"27053\",\"search\": {\"key_\": \"\"},\"sortfield\": \"name\"},\"auth\":
+    // \""+auth+"\",\"id\": 1}";
+
+    // //zabbixRPC.Testing(message, auth, zabbix_url);
+    // //message = "{\"jsonrpc\": \"2.0\",\"request\":\"sender
+    // data\",\"data\":[{\"host\":\"ACS_ZabbixAPI_Test\",\"key\":\"trapper\",\"value\":\"test
+    // value\"}],\"auth\": \""+auth+"\",\"id\": 1}";
+    // //message = "{\"jsonrpc\": \"2.0\",\"method\": \"host.get\",\"params\":
+    // {\"filter\":{\"host\":\"ACS_ZabbixAPI_Test\"}},\"id\": 2,\"auth\":
+    // \""+auth+"\"}";
+
+    // //GetZabbixHost(message, zabbix_url);
+
+    // //UpdateItem();
     // }
 
     @Scheduled(fixedRate = 60000)
-    private void DeviceStatusUpdate(){
+    private void DeviceStatusUpdate() {
         try {
             if (!appReady || httplogreqRepo == null || device_front == null) {
                 return;
             }
-            Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll(); 
-            List<httprequestlog> logs = StreamSupport.stream(listOfDevices.spliterator(), false).collect(Collectors.toList());
-            Set<String> serialNumbers = logs.stream().map(httprequestlog::get_SN).filter(sn -> sn != null && !sn.isEmpty()).collect(Collectors.toSet());
-            
+            Iterable<httprequestlog> listOfDevices = httplogreqRepo.findAll();
+            List<httprequestlog> logs = StreamSupport.stream(listOfDevices.spliterator(), false)
+                    .collect(Collectors.toList());
+            Set<String> serialNumbers = logs.stream().map(httprequestlog::get_SN)
+                    .filter(sn -> sn != null && !sn.isEmpty()).collect(Collectors.toSet());
+
             if (serialNumbers.isEmpty()) {
                 return;
             }
             List<device> devices = device_front.findAllBySerialNumbers(serialNumbers);
-            Map<String, device> deviceMap = devices.stream().collect(Collectors.toMap(device::getserial_number, Function.identity()));
+            Map<String, device> deviceMap = devices.stream()
+                    .collect(Collectors.toMap(device::getserial_number, Function.identity()));
 
             Long offlineThreshold = 3L;
             Long fallbackMs = 300000L;
@@ -1303,27 +1347,27 @@ public class testController {
                 } else {
                     timeIntervalMs = System.currentTimeMillis() - lastRequest.getTime();
                 }
-                
-                Long intervalMin = timeIntervalMs/60000;
+
+                Long intervalMin = timeIntervalMs / 60000;
                 device currentDevice = deviceMap.get(serialNumber);
 
                 if (currentDevice == null) {
                     continue;
                 }
-                
-                if(!currentDevice.getstatus().contains("syncing")){
-                    if(intervalMin>offlineThreshold){ // if last request was more than set minutes, set as offline
+
+                if (!currentDevice.getstatus().contains("syncing")) {
+                    if (intervalMin > offlineThreshold) { // if last request was more than set minutes, set as offline
                         if (!"offline".equals(currentDevice.getstatus())) {
-                            String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
+                            String offlineTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
+                                    .format(LocalDateTime.now());
                             currentDevice.setdate_offline(offlineTime);
                             device_front.save(currentDevice);
                             UpdateDeviceStatus(serialNumber, "offline");
                         }
-                        if("unassigned".equals(currentDevice.getparent())){
+                        if ("unassigned".equals(currentDevice.getparent())) {
                             device_front.delete(currentDevice);
                         }
-                    }
-                    else{
+                    } else {
                         if (!"online".equals(currentDevice.getstatus())) {
                             UpdateDeviceStatus(serialNumber, "online");
                         }
@@ -1342,21 +1386,21 @@ public class testController {
         }
     }
 
-    private void SaveSNandCookie(String SN, String Cookie){
-        if(httplogreqRepo.findBySerialNumEquals(SN).isEmpty()){
+    private void SaveSNandCookie(String SN, String Cookie) {
+        if (httplogreqRepo.findBySerialNumEquals(SN).isEmpty()) {
             httprequestlog newHttpLog = new httprequestlog();
             newHttpLog.set_SN(SN);
-            newHttpLog.set_cookie("session="+Cookie);
+            newHttpLog.set_cookie("session=" + Cookie);
             httplogreqRepo.save(newHttpLog);
-        }else{
+        } else {
             httprequestlog newHttpLog = httplogreqRepo.getBySerialNumEquals(SN);
             newHttpLog.set_SN(SN);
-            newHttpLog.set_cookie("session="+Cookie);
+            newHttpLog.set_cookie("session=" + Cookie);
             httplogreqRepo.save(newHttpLog);
         }
     }
-    
-    private void UpdateDeviceDetail(String Payload) throws JSONException{
+
+    private void UpdateDeviceDetail(String Payload) throws JSONException {
         SOAPBody InformData = null;
         Integer NumData = 0;
         try {
@@ -1367,16 +1411,19 @@ public class testController {
         NumData = InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
         StringBuilder sb = new StringBuilder();
 
-        for(int i=0; i<NumData; i++){
-            sb.append('"'+InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i).getChildNodes().item(0).getTextContent()+'"'+':');
-            sb.append('"'+InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i).getChildNodes().item(1).getTextContent()+'"');
-            if(i<(NumData-1)){
+        for (int i = 0; i < NumData; i++) {
+            sb.append('"' + InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i)
+                    .getChildNodes().item(0).getTextContent() + '"' + ':');
+            sb.append('"' + InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i)
+                    .getChildNodes().item(1).getTextContent() + '"');
+            if (i < (NumData - 1)) {
                 sb.append(",");
             }
         }
-        JSONObject object = new JSONObject('{'+sb.toString()+'}');
-        
-        if(devicesRepo.findBySerialNumEquals(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent()).isEmpty()){
+        JSONObject object = new JSONObject('{' + sb.toString() + '}');
+
+        if (devicesRepo.findBySerialNumEquals(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent())
+                .isEmpty()) {
             devices newDevice = new devices();
             newDevice.set_device_SN(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
             newDevice.set_device_Manufacturer(InformData.getElementsByTagName("Manufacturer").item(0).getTextContent());
@@ -1385,27 +1432,31 @@ public class testController {
             newDevice.set_device_MAC_ADD(object.get("Device.DeviceInfo.X_WWW-RUIJIE-COM-CN_MACAddress").toString());
             newDevice.set_udp_con_req_url(object.get("Device.ManagementServer.UDPConnectionRequestAddress").toString());
             devicesRepo.save(newDevice);
-        }else{
-            devices deviceUpdate = devicesRepo.gEntityBySerialnum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
+        } else {
+            devices deviceUpdate = devicesRepo
+                    .gEntityBySerialnum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
             deviceUpdate.set_device_SN(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
-            deviceUpdate.set_device_Manufacturer(InformData.getElementsByTagName("Manufacturer").item(0).getTextContent());
+            deviceUpdate
+                    .set_device_Manufacturer(InformData.getElementsByTagName("Manufacturer").item(0).getTextContent());
             deviceUpdate.set_device_OUI(InformData.getElementsByTagName("OUI").item(0).getTextContent());
             deviceUpdate.set_device_Model(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
             deviceUpdate.set_device_MAC_ADD(object.get("Device.DeviceInfo.X_WWW-RUIJIE-COM-CN_MACAddress").toString());
-            deviceUpdate.set_udp_con_req_url(object.get("Device.ManagementServer.UDPConnectionRequestAddress").toString());
-            devicesRepo.save(deviceUpdate); 
+            deviceUpdate
+                    .set_udp_con_req_url(object.get("Device.ManagementServer.UDPConnectionRequestAddress").toString());
+            devicesRepo.save(deviceUpdate);
         }
     }
 
     public void UpdateDevicesTable(String Payload) throws JSONException {
-        //DevicesGet
+        // DevicesGet
         /*
-        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-        //System.out.println("current thread:" + threadSet.size());
-        for(Thread t : threadSet){
-            //System.out.println("Thread Number:"+t.getId()+"-- " + t.getName() + ", "+t.getState());
-        }
-        */
+         * Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+         * //System.out.println("current thread:" + threadSet.size());
+         * for(Thread t : threadSet){
+         * //System.out.println("Thread Number:"+t.getId()+"-- " + t.getName() +
+         * ", "+t.getState());
+         * }
+         */
 
         SOAPBody InformData = null;
         Integer NumData = 0;
@@ -1417,41 +1468,47 @@ public class testController {
         NumData = InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().getLength();
         StringBuilder sb = new StringBuilder();
 
-        for(int i=0; i<NumData; i++){
-            sb.append('"'+InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i).getChildNodes().item(0).getTextContent()+'"'+':');
-            sb.append('"'+InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i).getChildNodes().item(1).getTextContent()+'"');
-            if(i<(NumData-1)){
+        for (int i = 0; i < NumData; i++) {
+            sb.append('"' + InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i)
+                    .getChildNodes().item(0).getTextContent() + '"' + ':');
+            sb.append('"' + InformData.getElementsByTagName("ParameterList").item(0).getChildNodes().item(i)
+                    .getChildNodes().item(1).getTextContent() + '"');
+            if (i < (NumData - 1)) {
                 sb.append(",");
             }
         }
-        JSONObject object = new JSONObject('{'+sb.toString()+'}');
+        JSONObject object = new JSONObject('{' + sb.toString() + '}');
 
-        //System.out.println("Json Length: " + object.length());
-        //System.out.println("Try JsonFind: " +object.get("Device.DeviceInfo.SoftwareVersion").toString());
-        
+        // System.out.println("Json Length: " + object.length());
+        // System.out.println("Try JsonFind: "
+        // +object.get("Device.DeviceInfo.SoftwareVersion").toString());
 
-        if(device_front.findBySerialNum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent()).isEmpty()){
+        if (device_front.findBySerialNum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent())
+                .isEmpty()) {
             device unassigned_device = new device();
-            unassigned_device.setserial_number(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
+            unassigned_device
+                    .setserial_number(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
             unassigned_device.setmac_address(object.get("Device.DeviceInfo.X_WWW-RUIJIE-COM-CN_MACAddress").toString());
             unassigned_device.setmodel(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
             unassigned_device.setstatus("online");
             unassigned_device.setparent("unassigned");
-            unassigned_device.setdate_created(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
-            //newDevice.set_date_modified(LocalTime.now().toString());
-            //if(newDevice.getstatus().contains("syncing")==false){
-            //    newDevice.setstatus("online");
-            //}
+            unassigned_device
+                    .setdate_created(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+            // newDevice.set_date_modified(LocalTime.now().toString());
+            // if(newDevice.getstatus().contains("syncing")==false){
+            // newDevice.setstatus("online");
+            // }
             unassigned_device.setactivated(false);
             device_front.save(unassigned_device);
 
-        }else{
-            device newDevice = device_front.getBySerialNum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
+        } else {
+            device newDevice = device_front
+                    .getBySerialNum(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
             newDevice.setserial_number(InformData.getElementsByTagName("SerialNumber").item(0).getTextContent());
             newDevice.setmac_address(object.get("Device.DeviceInfo.X_WWW-RUIJIE-COM-CN_MACAddress").toString());
             newDevice.setmodel(InformData.getElementsByTagName("ProductClass").item(0).getTextContent());
-            //newDevice.set_date_modified(LocalTime.now().toString());
-            if(!"syncing".equalsIgnoreCase(newDevice.getstatus())){
+            // newDevice.set_date_modified(LocalTime.now().toString());
+            if (!"syncing".equalsIgnoreCase(newDevice.getstatus())) {
                 newDevice.setstatus("online");
             }
             newDevice.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
@@ -1459,35 +1516,35 @@ public class testController {
             device_front.save(newDevice);
         }
     }
-    
-    public void SaveWebCLIOutput(String WebCLIOutput,String CommandUsed, String SN){
-        //System.out.println("SavingCLI");
-        //System.out.println(WebCLIOutput.length());
-        //System.out.println(WebCLIOutput);
-        new Thread(()->{
+
+    public void SaveWebCLIOutput(String WebCLIOutput, String CommandUsed, String SN) {
+        // System.out.println("SavingCLI");
+        // System.out.println(WebCLIOutput.length());
+        // System.out.println(WebCLIOutput);
+        new Thread(() -> {
             byte[] webcli_byte = WebCLIOutput.getBytes(Charsets.UTF_8);
             byte[] command_byte = CommandUsed.getBytes(Charsets.UTF_8);
 
-            System.out.println("Saving CLI Response: "+ new Timestamp(System.currentTimeMillis()));
+            System.out.println("Saving CLI Response: " + new Timestamp(System.currentTimeMillis()));
             webcli_response_log webCLIlog = new webcli_response_log();
             webCLIlog.set_CommandOutput(webcli_byte);
             webCLIlog.set_device_sn(SN);
             webCLIlog.set_CommandUsed(command_byte);
             webCliRepo.save(webCLIlog);
-            System.out.println("Saved CLI Response: "+ new Timestamp(System.currentTimeMillis()));
-        
+            System.out.println("Saved CLI Response: " + new Timestamp(System.currentTimeMillis()));
+
         }).start();
 
     }
 
-    //############################################################################
-    //TestSendConnectionRequest
-    //############################################################################
+    // ############################################################################
+    // TestSendConnectionRequest
+    // ############################################################################
 
-    //@RequestMapping(value="/TestSendConnectionRequest/{SN}")
-    public void SendUDPRequest(@PathVariable String SN) throws IOException{
-        
-        new Thread(()->{
+    // @RequestMapping(value="/TestSendConnectionRequest/{SN}")
+    public void SendUDPRequest(@PathVariable String SN) throws IOException {
+
+        new Thread(() -> {
             try {
                 Thread.sleep(1 * 1000);
             } catch (InterruptedException e2) {
@@ -1497,29 +1554,28 @@ public class testController {
             Instant instant = Instant.now();
             long timeStampSeconds = instant.toEpochMilli();
 
-            //String result = "";
+            // String result = "";
             devices current_device = devicesRepo.gEntityBySerialnum(SN);
             String udp_url = current_device.get_udp_con_req_url();
             String[] device_udp_url = udp_url.split(":");
             String host = device_udp_url[0];
             Integer portnum = Integer.parseInt(device_udp_url[1]);
 
-          
             StringBuilder sb = new StringBuilder();
-            
 
             Random r = new Random();
             int id = 10000000 + r.nextInt(90000000);
 
-            sb.append("GET http://"+udp_url+"?ts="+timeStampSeconds+"&id="+id+"&un=&cn=XTG&sig=DEFAULTSIGDEFAULTSIGDEFAULTSIGDEFAULTSIG HTTP/1.1\r\n");
+            sb.append("GET http://" + udp_url + "?ts=" + timeStampSeconds + "&id=" + id
+                    + "&un=&cn=XTG&sig=DEFAULTSIGDEFAULTSIGDEFAULTSIGDEFAULTSIG HTTP/1.1\r\n");
             sb.append("Accept:*/*\r\n");
             sb.append("Accept-Language:zh-cn\r\n");
             sb.append("host:localhost\r\n");
             sb.append("Content-Length:0\r\n");
-            
+
             String msg = sb.toString();
-            for(int i=0;i<2;i++){
-                udp_sender udpclient = null; 
+            for (int i = 0; i < 2; i++) {
+                udp_sender udpclient = null;
                 try {
                     udpclient = new udp_sender();
                 } catch (SocketException e1) {
@@ -1535,96 +1591,99 @@ public class testController {
                 }
                 udpclient.close();
             }
-            
+
         }).start();
-        //result = host+":"+portnum;
-        //return result;
+        // result = host+":"+portnum;
+        // return result;
     }
 
+    // ############################################################################
+    // SaveTask
+    // ############################################################################
 
-    //############################################################################
-    //SaveTask
-    //############################################################################
-    
-    public void SaveTask(String SN, String Method,String Parameters,String Optional){ 
+    public void SaveTask(String SN, String Method, String Parameters, String Optional) {
         taskhandler newTasK = new taskhandler();
         newTasK.set_SN(SN);
         newTasK.set_method(Method);
         newTasK.set_parameters(Parameters);
-        newTasK.set_optional(Optional);;
+        newTasK.set_optional(Optional);
+        ;
         taskhandlerRepo.save(newTasK);
     }
 
-    public void UpdateDeviceStatus(String SerialNum, String Status){
+    public void UpdateDeviceStatus(String SerialNum, String Status) {
         device devicestat = device_front.getBySerialNum(SerialNum);
-        //System.out.println(devicestat.getstatus());
-        if(devicestat.getstatus() != null && !devicestat.getstatus().contains("syncing")){
+        // System.out.println(devicestat.getstatus());
+        if (devicestat.getstatus() != null && !devicestat.getstatus().contains("syncing")) {
             devicestat.setstatus(Status);
         }
         device_front.save(devicestat);
     }
-  
-    private String Tr069ResponseHandler(String Method, String Parameters, String Option){
-        
-        if(Method.contains("AddObject")){
-            String body =  tr069response.AddObject(Parameters);
+
+    private String Tr069ResponseHandler(String Method, String Parameters, String Option) {
+
+        if (Method.contains("AddObject")) {
+            String body = tr069response.AddObject(Parameters);
             return body;
         }
-        if(Method.contains("GetParameterValues")){
+        if (Method.contains("GetParameterValues")) {
             String body = tr069response.GetParameterValues(Parameters);
             return body;
         }
-        if(Method.contains("GetParameterNames")){
+        if (Method.contains("GetParameterNames")) {
             String body = tr069response.GetParameterNames(Parameters);
             return body;
         }
-        if(Method.contains("SetParameterValues")){
+        if (Method.contains("SetParameterValues")) {
             String body = tr069response.SetParameterValues(Parameters);
             return body;
         }
-        if(Method.contains("Command")){
+        if (Method.contains("Command")) {
             String body = tr069response.Command(Parameters, "config");
             return body;
         }
-        if(Method.contains("WebCli")){
+        if (Method.contains("WebCli")) {
             String body = tr069response.Command(Parameters, Option);
             return body;
         }
-        if(Method.contains("GetRPCMethods")){
+        if (Method.contains("GetRPCMethods")) {
             String body = tr069response.GetRPCMethods();
             return body;
         }
-        if(Method.contains("Reboot")){
+        if (Method.contains("Reboot")) {
             String body = tr069response.Reboot();
             return body;
         }
-        if(Method.contains("DeleteObject")){
+        if (Method.contains("DeleteObject")) {
             String body = tr069response.DeleteObject(Parameters);
             return body;
         }
-        if(Method.contains("Save")){
+        if (Method.contains("Save")) {
             String body = tr069response.SaveConfig();
             return body;
         }
-        if(Method.contains("FactoryReset")){
+        if (Method.contains("FactoryReset")) {
             String body = tr069response.FactoryReset();
             return body;
         }
         return "Wrong RPC_Method";
     }
 
-    //'{"test":"1","test2":"2","test3":"3"}'
-    /*@RequestMapping(value="/AddSSID/{SerialNum}, {ObjectName}")
-    public String AddSSID(@RequestBody String SSIDSettings,@PathVariable String SerialNum, @PathVariable String ObjectName) {
-        
-        //System.out.println(SSIDSettings);
-
-        AddNewSSID(SSIDSettings, SerialNum, ObjectName);
-        
-        return SSIDSettings;
-    }*/
-    @RequestMapping(value="/ExecuteGroupCommand/{SerialNum}, {ID}")
-    public String ExecuteGroupCommand(@PathVariable String SerialNum, @PathVariable String ID){
+    // '{"test":"1","test2":"2","test3":"3"}'
+    /*
+     * @RequestMapping(value="/AddSSID/{SerialNum}, {ObjectName}")
+     * public String AddSSID(@RequestBody String SSIDSettings,@PathVariable String
+     * SerialNum, @PathVariable String ObjectName) {
+     * 
+     * //System.out.println(SSIDSettings);
+     * 
+     * AddNewSSID(SSIDSettings, SerialNum, ObjectName);
+     * 
+     * return SSIDSettings;
+     * }
+     */
+    @RequestMapping(value = "/ExecuteGroupCommand/{SerialNum}, {ID}")
+    public String ExecuteGroupCommand(@PathVariable String SerialNum, @PathVariable String ID) {
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
 
         Long id = Long.parseLong(ID);
@@ -1633,100 +1692,106 @@ public class testController {
 
         device DevicesInGroup = device_front.getBySerialNum(SerialNum);
 
-        String[] command_in_line = current_command.getcommand().split("\n",-1);
+        String[] command_in_line = current_command.getcommand().split("\n", -1);
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        for(int j=0;j<command_in_line.length;j++){
-            sb.append(",Command:"+command_in_line[j]);
+        for (int j = 0; j < command_in_line.length; j++) {
+            sb.append(",Command:" + command_in_line[j]);
         }
         sb.append(",}");
-        /*ObjectName = "{,Command:Set Hostname,Command:hostname "+deviceName+",Command:cpe inform interval 180,Command:end,Command:write,}";
-        SaveTask(serial_num, "Command", ObjectName, "config");*/
-        if(current_command.getmodel().contains("ALL")){
+        /*
+         * ObjectName = "{,Command:Set Hostname,Command:hostname "
+         * +deviceName+",Command:cpe inform interval 180,Command:end,Command:write,}";
+         * SaveTask(serial_num, "Command", ObjectName, "config");
+         */
+        if (current_command.getmodel().contains("ALL")) {
 
-            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
             LocalDateTime now = LocalDateTime.now();
 
             DevicesInGroup.setdate_modified(dtf.format(now));
             device_front.save(DevicesInGroup);
 
             SaveTask(DevicesInGroup.getserial_number(), "Command", sb.toString(), "config");
-        }else{
+        } else {
             String deviceModel = DevicesInGroup.getmodel();
-            if(current_command.getmodel().contains(deviceModel)){
-                
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
+            if (current_command.getmodel().contains(deviceModel)) {
+
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
                 LocalDateTime now = LocalDateTime.now();
 
                 DevicesInGroup.setdate_modified(dtf.format(now));
                 device_front.save(DevicesInGroup);
 
                 SaveTask(DevicesInGroup.getserial_number(), "Command", sb.toString(), "config");
-            }            
-        }   
+            }
+        }
         return "ExecuteCommand";
     }
 
-    @RequestMapping(value="/AddSSID/{SerialNum}, {ID}")
-    public String AddSSID(@PathVariable String SerialNum, @PathVariable String ID){
+    @RequestMapping(value = "/AddSSID/{SerialNum}, {ID}")
+    public String AddSSID(@PathVariable String SerialNum, @PathVariable String ID) {
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
 
         device current_device = device_front.getBySerialNum(SerialNum);
-                
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
-        
+
         current_device.setdate_modified(dtf.format(now));
-        device_front.save(current_device);        
+        device_front.save(current_device);
 
         Long id = Long.parseLong(ID);
         group_ssid ssid_to_add = ssidRepo.getByID(id);
         Integer wlan_id = ssid_to_add.getwlan_id();
-        
+
         StringBuilder SSIDSettings = new StringBuilder();
         String encryptionMode = null;
-        String encrypModetoConvert = ssid_to_add.getencryption_mode(); 
-        
-        if(encrypModetoConvert.contains("Open")){
+        String encrypModetoConvert = ssid_to_add.getencryption_mode();
+
+        if (encrypModetoConvert.contains("Open")) {
             encryptionMode = "None";
         }
-        if(encrypModetoConvert.contains("WPA-PSK")){
+        if (encrypModetoConvert.contains("WPA-PSK")) {
             encryptionMode = "WPA-Personal";
         }
-        if(encrypModetoConvert.contains("WPA2-PSK")){
+        if (encrypModetoConvert.contains("WPA2-PSK")) {
             encryptionMode = "WPA2-Personal";
         }
 
-        SSIDSettings.append("{,Device.WiFi.SSID."+wlan_id+".SSID:"+ssid_to_add.getssid());
-        SSIDSettings.append(",Device.WiFi.SSID."+wlan_id+".LowerLayers:1&2");
-        if(ssid_to_add.getforward_mode().contains("Nat")){
-            SSIDSettings.append(",Device.WiFi.SSID."+wlan_id+".X_WWW-RUIJIE-COM-CN_IsHidden:true");
-        }else{
-            SSIDSettings.append(",Device.WiFi.SSID."+wlan_id+".X_WWW-RUIJIE-COM-CN_IsHidden:false");
+        SSIDSettings.append("{,Device.WiFi.SSID." + wlan_id + ".SSID:" + ssid_to_add.getssid());
+        SSIDSettings.append(",Device.WiFi.SSID." + wlan_id + ".LowerLayers:1&2");
+        if (ssid_to_add.getforward_mode().contains("Nat")) {
+            SSIDSettings.append(",Device.WiFi.SSID." + wlan_id + ".X_WWW-RUIJIE-COM-CN_IsHidden:true");
+        } else {
+            SSIDSettings.append(",Device.WiFi.SSID." + wlan_id + ".X_WWW-RUIJIE-COM-CN_IsHidden:false");
         }
-        SSIDSettings.append(",Device.WiFi.SSID."+wlan_id+".X_WWW-RUIJIE-COM-CN_FowardType:"+ssid_to_add.getforward_mode());
-        
-        if(ssid_to_add.getforward_mode().contains("Bridge")){
-            SSIDSettings.append(",Device.WiFi.SSID."+wlan_id+".X_WWW-RUIJIE-COM-CN_VLANID:"+ssid_to_add.getvlan_id());
+        SSIDSettings.append(
+                ",Device.WiFi.SSID." + wlan_id + ".X_WWW-RUIJIE-COM-CN_FowardType:" + ssid_to_add.getforward_mode());
+
+        if (ssid_to_add.getforward_mode().contains("Bridge")) {
+            SSIDSettings
+                    .append(",Device.WiFi.SSID." + wlan_id + ".X_WWW-RUIJIE-COM-CN_VLANID:" + ssid_to_add.getvlan_id());
         }
-        SSIDSettings.append(",Device.WiFi.AccessPoint."+wlan_id+".Security.ModeEnabled:"+encryptionMode);
-        if(encryptionMode.contains("None")==false){
-            SSIDSettings.append(",Device.WiFi.AccessPoint."+wlan_id+".Security.KeyPassphrase:"+ssid_to_add.getpassphrase()+",}");
-        }else{
+        SSIDSettings.append(",Device.WiFi.AccessPoint." + wlan_id + ".Security.ModeEnabled:" + encryptionMode);
+        if (encryptionMode.contains("None") == false) {
+            SSIDSettings.append(",Device.WiFi.AccessPoint." + wlan_id + ".Security.KeyPassphrase:"
+                    + ssid_to_add.getpassphrase() + ",}");
+        } else {
             SSIDSettings.append(",}");
         }
-        //System.out.println("SSID-Settings: " + SSIDSettings.toString());
+        // System.out.println("SSID-Settings: " + SSIDSettings.toString());
         AddNewSSID(SSIDSettings.toString(), SerialNum, wlan_id.toString());
-        
-        if(ssid_to_add.getauth()){
+
+        if (ssid_to_add.getauth()) {
             StringBuilder AuthSettings = new StringBuilder();
             AuthSettings.append("{,WiFiDog");
-            AuthSettings.append(","+ssid_to_add.getportal_ip());
-            AuthSettings.append(","+ssid_to_add.getportal_url());
+            AuthSettings.append("," + ssid_to_add.getportal_ip());
+            AuthSettings.append("," + ssid_to_add.getportal_url());
             AuthSettings.append(",js");
-            AuthSettings.append(","+ssid_to_add.getgateway_id());
+            AuthSettings.append("," + ssid_to_add.getgateway_id());
             AuthSettings.append(",true");
-            AuthSettings.append(","+ssid_to_add.getseamless()+",}");
+            AuthSettings.append("," + ssid_to_add.getseamless() + ",}");
 
             AddNewAuth(AuthSettings.toString(), SerialNum, wlan_id.toString());
         }
@@ -1734,246 +1799,264 @@ public class testController {
         return "Adding SSID";
     }
 
-
-    public void AddNewSSID(String SSIDSettings,String  SerialNum,String ObjectName){
-        SaveTask(SerialNum, "GetParameterValues", "Device.WiFi.SSID."+ObjectName+".X_WWW-RUIJIE-COM-CN_ExistStatus","None");
-        SaveTask(SerialNum, "AddObject", "Device.WiFi.SSID.["+ObjectName+"].","AddSSID");
-        SaveTask(SerialNum, "AddObject", "Device.WiFi.AccessPoint.["+ObjectName+"].","None");
-        SaveTask(SerialNum, "SetParameterValues", SSIDSettings,"None");
-        SaveTask(SerialNum, "Save", "None","None");
+    public void AddNewSSID(String SSIDSettings, String SerialNum, String ObjectName) {
+        SaveTask(SerialNum, "GetParameterValues", "Device.WiFi.SSID." + ObjectName + ".X_WWW-RUIJIE-COM-CN_ExistStatus",
+                "None");
+        SaveTask(SerialNum, "AddObject", "Device.WiFi.SSID.[" + ObjectName + "].", "AddSSID");
+        SaveTask(SerialNum, "AddObject", "Device.WiFi.AccessPoint.[" + ObjectName + "].", "None");
+        SaveTask(SerialNum, "SetParameterValues", SSIDSettings, "None");
+        SaveTask(SerialNum, "Save", "None", "None");
     }
 
-    /*@RequestMapping(value="/AddAuth/{SerialNum}, {ObjectName}")
-    public String AddAuth(@RequestBody String SSIDSettings, @PathVariable String SerialNum, @PathVariable String ObjectName) {
-        AddNewAuth(SSIDSettings, SerialNum, ObjectName);
-        return "TaskAdded";
-    }*/
+    /*
+     * @RequestMapping(value="/AddAuth/{SerialNum}, {ObjectName}")
+     * public String AddAuth(@RequestBody String SSIDSettings, @PathVariable String
+     * SerialNum, @PathVariable String ObjectName) {
+     * AddNewAuth(SSIDSettings, SerialNum, ObjectName);
+     * return "TaskAdded";
+     * }
+     */
 
-    public void AddNewAuth(String SSIDSettings,String SerialNum,String ObjectName){
-        String[] ProcessedString = SSIDSettings.split(",",-1);
-        
+    public void AddNewAuth(String SSIDSettings, String SerialNum, String ObjectName) {
+        String[] ProcessedString = SSIDSettings.split(",", -1);
+
         StringBuilder authSetting = new StringBuilder();
-        authSetting.append("'{,Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_ModeEnabled:"+ProcessedString[1]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_PortalIP:"+ProcessedString[2]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_PortalUrl:http1//"+ProcessedString[3]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_GatewayIP:1.2.3.4,");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_RedirectMode:"+ProcessedString[4]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_GatewayID:"+ProcessedString[5]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication."+ObjectName+".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_OffDetectEnable:"+ProcessedString[6]+",");
-        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_AuthenticationGlobal.X_WWW-RUIJIE-COM-CN_StaPerceptionEnable:"+ProcessedString[7]+",}");
-        
-        SaveTask(SerialNum, "GetParameterValues", "Device.WiFi.SSID."+ObjectName+".X_WWW-RUIJIE-COM-CN_ExistStatus","None");
-        SaveTask(SerialNum, "Command", "'{,Command:dot11 wlan "+ObjectName+",Command:no band-select enable,}'","AddAuth");
-        SaveTask(SerialNum, "AddObject", "Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication.["+ObjectName+"].","None");
-        SaveTask(SerialNum, "SetParameterValues", authSetting.toString(),"None");
-        SaveTask(SerialNum, "Save", "None","None");
+        authSetting.append("'{,Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_ModeEnabled:" + ProcessedString[1] + ",");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_PortalIP:" + ProcessedString[2] + ",");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_PortalUrl:http1//" + ProcessedString[3] + ",");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_GatewayIP:1.2.3.4,");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_RedirectMode:" + ProcessedString[4] + ",");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_GatewayID:" + ProcessedString[5] + ",");
+        authSetting.append("Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication." + ObjectName
+                + ".X_WWW-RUIJIE-COM-CN_WiFiDog.X_WWW-RUIJIE-COM-CN_OffDetectEnable:" + ProcessedString[6] + ",");
+        authSetting
+                .append("Device.WiFi.X_WWW-RUIJIE-COM-CN_AuthenticationGlobal.X_WWW-RUIJIE-COM-CN_StaPerceptionEnable:"
+                        + ProcessedString[7] + ",}");
+
+        SaveTask(SerialNum, "GetParameterValues", "Device.WiFi.SSID." + ObjectName + ".X_WWW-RUIJIE-COM-CN_ExistStatus",
+                "None");
+        SaveTask(SerialNum, "Command", "'{,Command:dot11 wlan " + ObjectName + ",Command:no band-select enable,}'",
+                "AddAuth");
+        SaveTask(SerialNum, "AddObject", "Device.WiFi.X_WWW-RUIJIE-COM-CN_Authentication.[" + ObjectName + "].",
+                "None");
+        SaveTask(SerialNum, "SetParameterValues", authSetting.toString(), "None");
+        SaveTask(SerialNum, "Save", "None", "None");
     }
 
-    @RequestMapping(value="/AddObject/{SerialNum}, {ObjectName}")
+    @RequestMapping(value = "/AddObject/{SerialNum}, {ObjectName}")
     public String AddNewObject(@PathVariable String SerialNum, @PathVariable String ObjectName) {
         SaveTask(SerialNum, "AddObject", ObjectName, "None");
         return "Task Added";
     }
 
-    @RequestMapping(value="/GetParameterValues/{SerialNum}, {ObjectName}")
+    @RequestMapping(value = "/GetParameterValues/{SerialNum}, {ObjectName}")
     public String GetParameterValues(@PathVariable String SerialNum, @PathVariable String ObjectName) {
         SaveTask(SerialNum, "GetParameterValues", ObjectName, "None");
         return "Task Added";
     }
 
-    @RequestMapping(value="/SetParameterValues/{SerialNum}")
+    @RequestMapping(value = "/SetParameterValues/{SerialNum}")
     public String SetParameterValues(@RequestBody String ParameterList, @PathVariable String SerialNum) {
         SaveTask(SerialNum, "SetParameterValues", ParameterList, "None");
         return "Task Added";
     }
-  
-    @RequestMapping(value="/GetRPCMethods/{SerialNum}")
+
+    @RequestMapping(value = "/GetRPCMethods/{SerialNum}")
     public String GetRPCMethods(@PathVariable String SerialNum) {
         SaveTask(SerialNum, "GetRPCMethods", "None", "None");
         return "Task Added";
     }
-  
-    @RequestMapping(value="/Reboot/{SerialNum}")
-    public String Reboot(@PathVariable String SerialNum) { 
+
+    @RequestMapping(value = "/Reboot/{SerialNum}")
+    public String Reboot(@PathVariable String SerialNum) {
         SaveTask(SerialNum, "Reboot", "None", "None");
         return "Task Added";
     }
 
-    @RequestMapping(value="/DeleteObject/{SerialNum}, {ObjectName}")
-    public String DeleteObject(@PathVariable String SerialNum, @PathVariable String ObjectName)
-    {
+    @RequestMapping(value = "/DeleteObject/{SerialNum}, {ObjectName}")
+    public String DeleteObject(@PathVariable String SerialNum, @PathVariable String ObjectName) {
         SaveTask(SerialNum, "DeleteObject", ObjectName, "None");
         return "Task Added";
     }
 
-    @RequestMapping(value="/MoveDeviceGroup/{SerialNum}")
-    public String MoveDeviceGroup(@PathVariable String SerialNum){
+    @RequestMapping(value = "/MoveDeviceGroup/{SerialNum}")
+    public String MoveDeviceGroup(@PathVariable String SerialNum) {
         device device_to_bootstrap = device_front.getBySerialNum(SerialNum);
         System.out.println("attempting to move device group for device " + SerialNum);
-        if(!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())){
+        if (!"syncing".equalsIgnoreCase(device_to_bootstrap.getstatus())) {
             System.out.println("setting status to syncing for device " + SerialNum);
             device_to_bootstrap.setstatus("syncing");
             device_front.save(device_to_bootstrap);
             Bootstraping(SerialNum);
-        }        
+        }
         System.out.println("finished moving device group for device " + SerialNum);
         return "MoveDeviceGroup Initiated";
     }
 
     @RequestMapping(value = "/FactoryReset/{SerialNum}")
-    public String FactoryReset(@PathVariable String SerialNum){
+    public String FactoryReset(@PathVariable String SerialNum) {
         SaveTask(SerialNum, "FactoryReset", "None", "None");
         return "Reseting Device";
     }
-    
-    @RequestMapping(value="/Command/{SerialNum}")
+
+    @RequestMapping(value = "/Command/{SerialNum}")
     public String Command(@RequestBody String ObjectName, @PathVariable String SerialNum) {
-        
+
         SaveTask(SerialNum, "Command", ObjectName, "config");
         return "Task Added";
     }
 
-    @RequestMapping(value="/GetRogueDevices")
+    @RequestMapping(value = "/GetRogueDevices")
     public List<device> GetRougeDevices() {
         List<device> roguedevices = device_front.findByGroup("unassigned");
-        /*StringBuilder sb = new StringBuilder();
-        sb.append("{,");
-        for (device device : roguedevices) {
-            sb.append(device.getserial_number()+":"+device.getId()+",");
-        }
-        sb.append("}");
-        */
+        /*
+         * StringBuilder sb = new StringBuilder();
+         * sb.append("{,");
+         * for (device device : roguedevices) {
+         * sb.append(device.getserial_number()+":"+device.getId()+",");
+         * }
+         * sb.append("}");
+         */
         return roguedevices;
     }
 
-    @RequestMapping(value="/CheckParentGroup")
+    @RequestMapping(value = "/CheckParentGroup")
     public String CheckParentGroup(@RequestBody String parent) {
         List<groups> groups = group_repo.findByParent(parent);
-        if(groups.size()>0){
+        if (groups.size() > 0) {
             StringBuilder sb = new StringBuilder();
             sb.append("{,");
             for (groups groups2 : groups) {
-                sb.append(groups2.getgroup_name()+",");    
+                sb.append(groups2.getgroup_name() + ",");
             }
             sb.append("}");
             return sb.toString();
-        }else{
+        } else {
             return "parent not exist";
         }
     }
 
-    @RequestMapping(value="/WebCli/{SerialNum}")
+    @RequestMapping(value = "/WebCli/{SerialNum}")
     public DeferredResult<ResponseEntity<String>> WebCli(
-        @RequestBody String Modes,
-        @PathVariable String SerialNum,
-        HttpServletRequest request) throws JSONException {
+            @RequestBody String Modes,
+            @PathVariable String SerialNum,
+            HttpServletRequest request) throws JSONException {
 
-    String[] modez = Modes.split(",", -1);
-    if (modez.length <= 7) {
-        DeferredResult<ResponseEntity<String>> errorResult = new DeferredResult<>();
-        errorResult.setResult(ResponseEntity.badRequest().body("Invalid Modes format"));
-        return errorResult;
+        String[] modez = Modes.split(",", -1);
+        if (modez.length <= 7) {
+            DeferredResult<ResponseEntity<String>> errorResult = new DeferredResult<>();
+            errorResult.setResult(ResponseEntity.badRequest().body("Invalid Modes format"));
+            return errorResult;
+        }
+
+        String ObjectName = modez[7];
+        System.out.println("Command: " + Modes);
+        System.out.println("ObjectName: " + ObjectName);
+
+        AddWebCLiTask(Modes, SerialNum, ObjectName);
+
+        DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(300000L);
+        AtomicReference<Thread> pollingThreadRef = new AtomicReference<>();
+
+        // Handle timeout
+        result.onTimeout(() -> {
+            System.out.println("Request timed out for Serial: " + SerialNum);
+            Thread t = pollingThreadRef.get();
+            if (t != null)
+                t.interrupt();
+            result.setErrorResult(ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Request timed out"));
+        });
+
+        // Handle error
+        result.onError((Throwable t) -> {
+            System.err.println("Error occurred: " + t.getMessage());
+            Thread pollingThread = pollingThreadRef.get();
+            if (pollingThread != null)
+                pollingThread.interrupt();
+            result.setErrorResult(ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Internal server error"));
+        });
+
+        Thread pollingThread = new Thread(() -> {
+            try {
+                String body;
+                while (true) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
+
+                    body = GetCLIOutput(SerialNum, ObjectName);
+                    if (body != null) {
+                        result.setResult(ResponseEntity.ok()
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .body(body));
+                        return;
+                    }
+
+                    Thread.sleep(100); // avoid tight loop
+                }
+            } catch (InterruptedException e) {
+                System.out.println("current thread was stopped for serial: " + SerialNum);
+                Thread.currentThread().interrupt();
+            }
+        }, "WebCli-" + SerialNum);
+
+        pollingThreadRef.set(pollingThread);
+        pollingThread.start();
+
+        return result;
     }
 
-    String ObjectName = modez[7];
-    System.out.println("Command: " + Modes);
-    System.out.println("ObjectName: " + ObjectName);
+    @RequestMapping(value = "/CliAutoComplete/ {SerialNum}")
+    public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,
+            @PathVariable String SerialNum, HttpServletRequest request)
+            throws JSONException {
+        // System.out.println("Modez: "+ Modes);
 
-    AddWebCLiTask(Modes, SerialNum, ObjectName);
-
-    DeferredResult<ResponseEntity<String>> result = new DeferredResult<>(300000L);
-    AtomicReference<Thread> pollingThreadRef = new AtomicReference<>();
-
-    // Handle timeout
-    result.onTimeout(() -> {
-        System.out.println("Request timed out for Serial: " + SerialNum);
-        Thread t = pollingThreadRef.get();
-        if (t != null) t.interrupt();
-        result.setErrorResult(ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Request timed out"));
-    });
-
-    // Handle error
-    result.onError((Throwable t) -> {
-        System.err.println("Error occurred: " + t.getMessage());
-        Thread pollingThread = pollingThreadRef.get();
-        if (pollingThread != null) pollingThread.interrupt();
-        result.setErrorResult(ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Internal server error"));
-    });
-
-    Thread pollingThread = new Thread(() -> {
-        try {
-            String body;
-            while (true) {
-                if (Thread.currentThread().isInterrupted()) {
-                    return;
-                }
-
-                body = GetCLIOutput(SerialNum, ObjectName);
-                if (body != null) {
-                    result.setResult(ResponseEntity.ok()
-                            .contentType(MediaType.TEXT_PLAIN)
-                            .body(body));
-                    return;
-                }
-
-                Thread.sleep(100); // avoid tight loop
-            }
-        } catch (InterruptedException e) {
-            System.out.println("current thread was stopped for serial: " + SerialNum);
-            Thread.currentThread().interrupt();
-        }
-    }, "WebCli-" + SerialNum);
-
-    pollingThreadRef.set(pollingThread);
-    pollingThread.start();
-
-    return result;
-}
-
-    @RequestMapping(value="/CliAutoComplete/ {SerialNum}")
-    public DeferredResult<ResponseEntity<String>> CliAutoComplete(@RequestBody String Modes,@PathVariable String SerialNum, HttpServletRequest request )
-            throws JSONException 
-    {  
-        //System.out.println("Modez: "+ Modes);
-        
         DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
         new Thread(() -> {
             String body = "";
-            String[] modez = Modes.split(",",-1);
+            String[] modez = Modes.split(",", -1);
             String ObjectName = modez[7];
             devices current_device = devicesRepo.gEntityBySerialnum(SerialNum);
             String deviceModel = current_device.get_device_Model();
             List<auto_complete> suggestion_lists = auto_completeRepo.findByDeviceModel(deviceModel);
             boolean found = false;
-            if(!suggestion_lists.isEmpty()){
-                
+            if (!suggestion_lists.isEmpty()) {
+
                 for (auto_complete auto_complete : suggestion_lists) {
-                    System.out.println("from db"+auto_complete.get_command());
+                    System.out.println("from db" + auto_complete.get_command());
                     System.out.println("from ObjName" + ObjectName);
-                    if(ObjectName.contains(auto_complete.get_command())){
-                        body = new String(auto_complete.get_suggestion_list(),Charsets.UTF_8);
+                    if (ObjectName.contains(auto_complete.get_command())) {
+                        body = new String(auto_complete.get_suggestion_list(), Charsets.UTF_8);
                         found = true;
-                        result.setResult( ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
+                        result.setResult(
+                                ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
                     }
                 }
                 System.out.println("found " + found);
-                if(!found){
+                if (!found) {
                     try {
                         AddWebCLiTask(Modes, SerialNum, ObjectName);
                     } catch (JSONException e1) {
                         e1.printStackTrace();
                     }
-    
-                    while(true){
+
+                    while (true) {
                         body = GetCLIOutput(SerialNum, ObjectName);
-                        if(body!=null){
+                        if (body != null) {
                             break;
                         }
-        
+
                     }
                     try {
                         auto_complete NewSuggestion = new auto_complete();
@@ -1984,25 +2067,23 @@ public class testController {
                     } catch (Exception e) {
                         System.out.println(e);
                     }
-                    
-                    
-                    //System.out.println("test--------" + body);
-                    result.setResult( ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
+
+                    // System.out.println("test--------" + body);
+                    result.setResult(ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
                 }
-            }
-            else{
-                if(!found){
+            } else {
+                if (!found) {
                     try {
                         AddWebCLiTask(Modes, SerialNum, ObjectName);
                     } catch (JSONException e1) {
                         e1.printStackTrace();
                     }
-                    while(true){
+                    while (true) {
                         body = GetCLIOutput(SerialNum, ObjectName);
-                        if(body!=null){
+                        if (body != null) {
                             break;
                         }
-        
+
                     }
                     try {
                         auto_complete NewSuggestion = new auto_complete();
@@ -2013,35 +2094,31 @@ public class testController {
                     } catch (Exception e) {
                         System.out.println(e);
                     }
-                    
-                    
-                    //System.out.println("test--------" + body);
-                    result.setResult( ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
+
+                    // System.out.println("test--------" + body);
+                    result.setResult(ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(body));
                 }
-                
-                
+
             }
-            
-        }, "MyThread for " ).start();
+
+        }, "MyThread for ").start();
         return result;
     }
 
-
-    private String GetCLIOutput(String SerialNum, String ObjectName)
-    {
-        //String Byte2String = new String(webcli_byte, Charsets.UTF_8);
+    private String GetCLIOutput(String SerialNum, String ObjectName) {
+        // String Byte2String = new String(webcli_byte, Charsets.UTF_8);
         String Outputbody = null;
         String CommandUsed = null;
         List<webcli_response_log> cliOutput = webCliRepo.findBySerialNumEquals(SerialNum);
-        if(cliOutput!=null){
+        if (cliOutput != null) {
             Integer NumOutput = cliOutput.size();
-            for(int i=0; i<NumOutput; i++){
+            for (int i = 0; i < NumOutput; i++) {
                 webcli_response_log currentCheck = cliOutput.get(i);
                 CommandUsed = new String(currentCheck.get_CommandUsed(), Charsets.UTF_8);
-                if(CommandUsed.contains("\""+ObjectName+"\"")){
-                    Outputbody = new String(currentCheck.get_CommandOutput(), Charsets.UTF_8);                       
+                if (CommandUsed.contains("\"" + ObjectName + "\"")) {
+                    Outputbody = new String(currentCheck.get_CommandOutput(), Charsets.UTF_8);
                     webCliRepo.delete(webCliRepo.getByID(currentCheck.get_Id()));
-                    System.out.println("Cli OutputBody: "+ new Timestamp(System.currentTimeMillis()));
+                    System.out.println("Cli OutputBody: " + new Timestamp(System.currentTimeMillis()));
                     return Outputbody;
                 }
             }
@@ -2049,248 +2126,258 @@ public class testController {
         return Outputbody;
     }
 
-    private void AddWebCLiTask(String Modes,String SerialNum,String ObjectName)throws JSONException
-    {
+    private void AddWebCLiTask(String Modes, String SerialNum, String ObjectName) throws JSONException {
         System.out.println("attempting to add webcli task");
-        if(webCliRepo.findBySerialNumEquals(SerialNum).isEmpty()){
+        if (webCliRepo.findBySerialNumEquals(SerialNum).isEmpty()) {
             String Head = "web_cli \"exec\" \"0\" \"0\" \"0\" \"\" \"\" ";
-            SaveTask(SerialNum, "WebCli", "{,\"Command\":"+Head+'"'+ObjectName+'"'+",}", "shell");
-            
-        }else{
+            SaveTask(SerialNum, "WebCli", "{,\"Command\":" + Head + '"' + ObjectName + '"' + ",}", "shell");
 
-            String[] modez = Modes.split(",",-1);
+        } else {
+
+            String[] modez = Modes.split(",", -1);
             StringBuilder Head = new StringBuilder();
             Head.append("web_cli ");
-            
-            //Head.append('"'+modez[0].replaceAll("[^a-zA-Z0-9]", "")+'"'+" ");
-            Head.append('"'+modez[1]+'"'+" ");
-            Head.append('"'+modez[2]+'"'+" ");
-            Head.append('"'+modez[3]+'"'+" ");
-            Head.append("\""+modez[4]+"\" ");
-            Head.append("\""+modez[5]+"\" ");
-            Head.append("\""+modez[6]+"\" ");
-            //webCliRepo.delete(webCliRepo.getByID(ResponseLog.get(ResponseLog.size()-1).get_Id()));
-            //System.out.println("HeadCLI: "+Head.toString());
-            //System.out.println("WebCLI: "+"{,\"Command\":"+Head.toString()+'"'+ObjectName+'"'+",}");
-            SaveTask(SerialNum, "WebCli", "{,\"Command\":"+Head.toString()+'"'+ObjectName+'"'+",}", "shell");            
+
+            // Head.append('"'+modez[0].replaceAll("[^a-zA-Z0-9]", "")+'"'+" ");
+            Head.append('"' + modez[1] + '"' + " ");
+            Head.append('"' + modez[2] + '"' + " ");
+            Head.append('"' + modez[3] + '"' + " ");
+            Head.append("\"" + modez[4] + "\" ");
+            Head.append("\"" + modez[5] + "\" ");
+            Head.append("\"" + modez[6] + "\" ");
+            // webCliRepo.delete(webCliRepo.getByID(ResponseLog.get(ResponseLog.size()-1).get_Id()));
+            // System.out.println("HeadCLI: "+Head.toString());
+            // System.out.println("WebCLI:
+            // "+"{,\"Command\":"+Head.toString()+'"'+ObjectName+'"'+",}");
+            SaveTask(SerialNum, "WebCli", "{,\"Command\":" + Head.toString() + '"' + ObjectName + '"' + ",}", "shell");
         }
-        System.out.println("Commited CLI Request: "+ new Timestamp(System.currentTimeMillis()));
+        System.out.println("Commited CLI Request: " + new Timestamp(System.currentTimeMillis()));
     }
 
-    //################################################################################################
-    //Backend MVC Endpoints ##########################################################################
-    //################################################################################################
+    // ################################################################################################
+    // Backend MVC Endpoints
+    // ##########################################################################
+    // ################################################################################################
 
     @GetMapping("/getssid")
-	public Iterable<group_ssid> getAllCustomers() {
+    public Iterable<group_ssid> getAllCustomers() {
 
-		List<group_ssid> customers = new ArrayList<>();
-		ssidRepo.findAll().forEach(customers::add);
-        
-        //System.out.println("customers: " + customers);
-		return customers;
+        List<group_ssid> customers = new ArrayList<>();
+        ssidRepo.findAll().forEach(customers::add);
+
+        // System.out.println("customers: " + customers);
+        return customers;
     }
 
-	@GetMapping("/getgroup")
-	public List<groups> getAllGroups() {
+    @GetMapping("/getgroup")
+    public List<groups> getAllGroups() {
 
-		List<groups> customers = new ArrayList<>();
-		group_repo.findAll().forEach(customers::add);
+        List<groups> customers = new ArrayList<>();
+        group_repo.findAll().forEach(customers::add);
 
-		return customers;
+        return customers;
     }
 
-	@GetMapping("/getdevice")
-	public List<device> getAllDevice() {
+    @GetMapping("/getdevice")
+    public List<device> getAllDevice() {
 
-		List<device> Device = new ArrayList<>();
+        List<device> Device = new ArrayList<>();
         device_front.findAll().forEach(Device::add);
 
-		return Device;
+        return Device;
     }
 
-	@GetMapping("/getcommand")
-	public List<group_command> getAllCommands() {
+    @GetMapping("/getcommand")
+    public List<group_command> getAllCommands() {
 
-		List<group_command> commands = new ArrayList<>();
-        //group_commandRepo.findAll().forEach(commands::add);
+        List<group_command> commands = new ArrayList<>();
+        // group_commandRepo.findAll().forEach(commands::add);
         GroupCommandRepo.findAll().forEach(commands::add);
-        
-		return commands;
+
+        return commands;
     }
     // TODO; continue progress
     // @PostMapping(path = "/api/sendlog") // logs user action from frontend
-    // public ResponseEntity<String> logAction(@RequestParam String action, @RequestParam String status, @RequestParam String service, @RequestParam String payload, @RequestParam String clientIp) throws JSONException, IOException {
-    //     return new ResponseEntity<String>("logged user action", HttpStatus.OK);
+    // public ResponseEntity<String> logAction(@RequestParam String action,
+    // @RequestParam String status, @RequestParam String service, @RequestParam
+    // String payload, @RequestParam String clientIp) throws JSONException,
+    // IOException {
+    // return new ResponseEntity<String>("logged user action", HttpStatus.OK);
     // }
 
-	@PostMapping("/adddevice")
-	public device postGroup(@RequestBody device DEVICE) {
+    @PostMapping("/adddevice")
+    public device postGroup(@RequestBody device DEVICE) {
 
-        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(), DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(), LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")), DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(), DEVICE.getdevice_type()));
-		return Device;
+        device Device = device_front.save(new device(DEVICE.getdevice_name(), DEVICE.getmac_address(),
+                DEVICE.getserial_number(), DEVICE.getlocation(), DEVICE.getparent(),
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")),
+                DEVICE.getdate_modified(), DEVICE.getdate_offline(), DEVICE.getstatus(), DEVICE.getmodel(),
+                DEVICE.getdevice_type()));
+        return Device;
     }
 
-	@PostMapping("/addgroup")
-	public groups postGroup(@RequestBody groups GROUP) {
+    @PostMapping("/addgroup")
+    public groups postGroup(@RequestBody groups GROUP) {
 
-    groups GroupS = group_repo.save(new groups(GROUP.getgroup_name(), GROUP.getlocation(), GROUP.getparent(), GROUP.getchild(),
-    GROUP.getdate_created(), GROUP.getdate_modified()));
-		return GroupS;
+        groups GroupS = group_repo
+                .save(new groups(GROUP.getgroup_name(), GROUP.getlocation(), GROUP.getparent(), GROUP.getchild(),
+                        GROUP.getdate_created(), GROUP.getdate_modified()));
+        return GroupS;
 
     }
 
-	@PostMapping("/addcommand")
-	public group_command postCommand(@RequestBody group_command COMMAND) {
+    @PostMapping("/addcommand")
+    public group_command postCommand(@RequestBody group_command COMMAND) {
 
-    group_command Commands = GroupCommandRepo.save(new group_command(COMMAND.getmodel(), COMMAND.getdescription(), COMMAND.getparent(), COMMAND.getcommand()));
-		return Commands;
+        group_command Commands = GroupCommandRepo.save(new group_command(COMMAND.getmodel(), COMMAND.getdescription(),
+                COMMAND.getparent(), COMMAND.getcommand()));
+        return Commands;
 
     }
 
     @PostMapping("/addssid")
-	public group_ssid postSSID(@RequestBody group_ssid ssID) {
-        group_ssid _ssid = ssidRepo.save(new group_ssid(ssID.getssid(), 
-        ssID.getforward_mode(), 
-        ssID.getvlan_id(), 
-        ssID.getwlan_id(), 
-        ssID.getencryption_mode(), 
-        ssID.getpassphrase(), 
-        ssID.getlimitless(),
-        ssID.getuplink(), 
-        ssID.getdownlink(), 
-        ssID.getauth(), 
-        ssID.getportal_url(), 
-        ssID.getportal_ip(), 
-        ssID.getparent(),
-        ssID.getgateway_id(), 
-        ssID.getseamless()));
-		return _ssid;
+    public group_ssid postSSID(@RequestBody group_ssid ssID) {
+        group_ssid _ssid = ssidRepo.save(new group_ssid(ssID.getssid(),
+                ssID.getforward_mode(),
+                ssID.getvlan_id(),
+                ssID.getwlan_id(),
+                ssID.getencryption_mode(),
+                ssID.getpassphrase(),
+                ssID.getlimitless(),
+                ssID.getuplink(),
+                ssID.getdownlink(),
+                ssID.getauth(),
+                ssID.getportal_url(),
+                ssID.getportal_ip(),
+                ssID.getparent(),
+                ssID.getgateway_id(),
+                ssID.getseamless()));
+        return _ssid;
     }
 
     @PutMapping("/updatessid/{id}")
     public ResponseEntity<group_ssid> updateCustomer(@PathVariable("id") long id, @RequestBody group_ssid ssID) {
-      //System.out.println("Update Customer with ID = " + id + "...");
-   
-      Optional<group_ssid> customerData = ssidRepo.findById(id);
-   
-      if (customerData.isPresent()) {
-        group_ssid _ssid = customerData.get();
-        _ssid.setssid(ssID.getssid());
-        _ssid.setforward_mode(ssID.getforward_mode());
-        _ssid.setvlan_id(ssID.getvlan_id());
-        _ssid.setwlan_id(ssID.getwlan_id());
-        _ssid.setencryption_mode(ssID.getencryption_mode());
-        _ssid.setpassphrase(ssID.getpassphrase());
-        _ssid.setlimitless(ssID.getlimitless());
-        _ssid.setuplink(ssID.getuplink());
-        _ssid.setdownlink(ssID.getdownlink());
-        _ssid.setauth(ssID.getauth());
-        _ssid.setportal_url(ssID.getportal_url());
-        _ssid.setportal_ip(ssID.getportal_ip());
-        _ssid.setparent(ssID.getparent());
-        _ssid.setgateway_id(ssID.getgateway_id());
-        _ssid.setseamless(ssID.getseamless());
-        return new ResponseEntity<>(ssidRepo.save(_ssid), HttpStatus.OK);
-      } else {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-      }
-    }    
+        // System.out.println("Update Customer with ID = " + id + "...");
 
+        Optional<group_ssid> customerData = ssidRepo.findById(id);
+
+        if (customerData.isPresent()) {
+            group_ssid _ssid = customerData.get();
+            _ssid.setssid(ssID.getssid());
+            _ssid.setforward_mode(ssID.getforward_mode());
+            _ssid.setvlan_id(ssID.getvlan_id());
+            _ssid.setwlan_id(ssID.getwlan_id());
+            _ssid.setencryption_mode(ssID.getencryption_mode());
+            _ssid.setpassphrase(ssID.getpassphrase());
+            _ssid.setlimitless(ssID.getlimitless());
+            _ssid.setuplink(ssID.getuplink());
+            _ssid.setdownlink(ssID.getdownlink());
+            _ssid.setauth(ssID.getauth());
+            _ssid.setportal_url(ssID.getportal_url());
+            _ssid.setportal_ip(ssID.getportal_ip());
+            _ssid.setparent(ssID.getparent());
+            _ssid.setgateway_id(ssID.getgateway_id());
+            _ssid.setseamless(ssID.getseamless());
+            return new ResponseEntity<>(ssidRepo.save(_ssid), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     @PutMapping("/updatecommand/{id}")
-    public ResponseEntity<group_command> updateCommand(@PathVariable("id") long id, @RequestBody group_command Command) {
-      //System.out.println("Update Customer with ID = " + id + "...");
-   
-      Optional<group_command> commandData = GroupCommandRepo.findById(id);
-   
-      if (commandData.isPresent()) {
-        group_command _command = commandData.get();
-        _command.setmodel(Command.getmodel());
-        _command.setparent(Command.getparent());
-        _command.setdescription(Command.getdescription());
-        _command.setcommand(Command.getcommand());
-        return new ResponseEntity<>(GroupCommandRepo.save(_command), HttpStatus.OK);
-      } else {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-      }
-    } 
+    public ResponseEntity<group_command> updateCommand(@PathVariable("id") long id,
+            @RequestBody group_command Command) {
+        // System.out.println("Update Customer with ID = " + id + "...");
+
+        Optional<group_command> commandData = GroupCommandRepo.findById(id);
+
+        if (commandData.isPresent()) {
+            group_command _command = commandData.get();
+            _command.setmodel(Command.getmodel());
+            _command.setparent(Command.getparent());
+            _command.setdescription(Command.getdescription());
+            _command.setcommand(Command.getcommand());
+            return new ResponseEntity<>(GroupCommandRepo.save(_command), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     @PutMapping("/updategroup/{id}")
     public ResponseEntity<groups> updateGroup(@PathVariable("id") long id, @RequestBody groups Group) {
-      //System.out.println("Update Customer with ID = " + id + "...");
-   
-      Optional<groups> groupData = group_repo.findById(id);
-   
-      if (groupData.isPresent()) {
-        groups _groups = groupData.get();
-        _groups.setgroup_name(Group.getgroup_name());
-        _groups.setparent(Group.getparent());
-        _groups.setlocation(Group.getlocation());
-        _groups.setchild(Group.getchild());
-        _groups.setdate_created(Group.getdate_created());
-        _groups.setdate_modified(Group.getdate_modified());
-        return new ResponseEntity<>(group_repo.save(_groups), HttpStatus.OK);
-      } else {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-      }
-    } 
+        // System.out.println("Update Customer with ID = " + id + "...");
+
+        Optional<groups> groupData = group_repo.findById(id);
+
+        if (groupData.isPresent()) {
+            groups _groups = groupData.get();
+            _groups.setgroup_name(Group.getgroup_name());
+            _groups.setparent(Group.getparent());
+            _groups.setlocation(Group.getlocation());
+            _groups.setchild(Group.getchild());
+            _groups.setdate_created(Group.getdate_created());
+            _groups.setdate_modified(Group.getdate_modified());
+            return new ResponseEntity<>(group_repo.save(_groups), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     @PutMapping("/updatedevice/{id}")
     public ResponseEntity<device> updateDevice(@PathVariable("id") long id, @RequestBody device Device) {
-      //System.out.println("Update Customer with ID = " + id + "...");
-   
-      Optional<device> deviceData = device_front.findById(id);
-   
-      if (deviceData.isPresent()) {
-        device _device = deviceData.get();
-        _device.setdevice_name(Device.getdevice_name());
-        _device.setparent(Device.getparent());
-        _device.setlocation(Device.getlocation()); 
-        _device.setmac_address(Device.getmac_address());
-        _device.setserial_number(Device.getserial_number());
-        _device.setdate_created(Device.getdate_created());
-        _device.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
-        _device.setdevice_type(Device.getdevice_type());
-        return new ResponseEntity<>(device_front.save(_device), HttpStatus.OK);
-      } else {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-      }
-    } 
+        // System.out.println("Update Customer with ID = " + id + "...");
 
-	@DeleteMapping("/deletessid/{id}")
-	public ResponseEntity<String> deleteCustomer(@PathVariable("id") long id) {
-		//System.out.println("Delete Customer with ID = " + id + "...");
+        Optional<device> deviceData = device_front.findById(id);
 
-		ssidRepo.deleteById(id);
-
-		return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
+        if (deviceData.isPresent()) {
+            device _device = deviceData.get();
+            _device.setdevice_name(Device.getdevice_name());
+            _device.setparent(Device.getparent());
+            _device.setlocation(Device.getlocation());
+            _device.setmac_address(Device.getmac_address());
+            _device.setserial_number(Device.getserial_number());
+            _device.setdate_created(Device.getdate_created());
+            _device.setdate_modified(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+            _device.setdevice_type(Device.getdevice_type());
+            return new ResponseEntity<>(device_front.save(_device), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
-	@DeleteMapping("/deletecommand/{id}")
-	public ResponseEntity<String> deleteCommand(@PathVariable("id") long id) {
-		//System.out.println("Delete Customer with ID = " + id + "...");
+    @DeleteMapping("/deletessid/{id}")
+    public ResponseEntity<String> deleteCustomer(@PathVariable("id") long id) {
+        // System.out.println("Delete Customer with ID = " + id + "...");
 
-		GroupCommandRepo.deleteById(id);
+        ssidRepo.deleteById(id);
 
-		return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
+        return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
     }
-    
-	@DeleteMapping("/deletegroup/{id}")
-	public ResponseEntity<String> deleteGroup(@PathVariable("id") long id) {
-		//System.out.println("Delete Customer with ID = " + id + "...");
 
-		group_repo.deleteById(id);
+    @DeleteMapping("/deletecommand/{id}")
+    public ResponseEntity<String> deleteCommand(@PathVariable("id") long id) {
+        // System.out.println("Delete Customer with ID = " + id + "...");
 
-		return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
+        GroupCommandRepo.deleteById(id);
+
+        return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
     }
-    
-	@DeleteMapping("/deletedevice/{id}")
-	public ResponseEntity<String> deleteDevice(@PathVariable("id") long id) {
-		//System.out.println("Delete Customer with ID = " + id + "...");
 
-		device_front.deleteById(id);
+    @DeleteMapping("/deletegroup/{id}")
+    public ResponseEntity<String> deleteGroup(@PathVariable("id") long id) {
+        // System.out.println("Delete Customer with ID = " + id + "...");
 
-		return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
-	}
+        group_repo.deleteById(id);
+
+        return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
+    }
+
+    @DeleteMapping("/deletedevice/{id}")
+    public ResponseEntity<String> deleteDevice(@PathVariable("id") long id) {
+        // System.out.println("Delete Customer with ID = " + id + "...");
+
+        device_front.deleteById(id);
+
+        return new ResponseEntity<>("Customer has been deleted!", HttpStatus.OK);
+    }
 }
